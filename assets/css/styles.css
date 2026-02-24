@@ -80,3 +80,34 @@ button:hover { border-color: var(--gold-500); color: var(--gold-400); cursor: po
   .toolbar, .dropzone { display: none; }
   body { background: #fff; color: #000; }
 }
+  --bg: #0b1220;
+  --panel: #111b2f;
+  --border: #253450;
+  --text: #e5ecff;
+  --muted: #92a4cc;
+  --accent: #22d3ee;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, Arial, sans-serif; background: var(--bg); color: var(--text); }
+.header, .toolbar { padding: 1rem 1.2rem; }
+.header p { color: var(--muted); }
+.toolbar { display: flex; flex-wrap: wrap; gap: .6rem; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+button, input[type="file"] { background: #0f172a; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: .45rem .7rem; }
+.dropzone { margin: 1rem; padding: 1rem; border: 2px dashed var(--accent); border-radius: 12px; text-align: center; }
+.dropzone.dragover { background: #123850; }
+.preview-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; padding: 1rem; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.card-header { display:flex; justify-content: space-between; align-items: baseline; gap:.5rem; padding: .8rem 1rem; border-bottom: 1px solid var(--border); }
+.filename { margin:0; font-size: 1rem; word-break: break-all; }
+.meta { color: var(--muted); font-size: .85rem; }
+.panes { display: grid; grid-template-columns: 1fr 1fr; min-height: 320px; }
+.raw, .rendered { margin:0; padding: .9rem; overflow:auto; }
+.raw { background: #0a1426; border-right:1px solid var(--border); white-space: pre-wrap; word-break: break-word; }
+.rendered { background: #121d33; }
+.rendered h1,.rendered h2,.rendered h3 { margin-top:0; }
+.rendered pre { background:#0a1426; padding:.6rem; border:1px solid var(--border); border-radius:8px; white-space: pre-wrap; }
+.rendered table { width:100%; border-collapse: collapse; }
+.rendered th,.rendered td { border:1px solid var(--border); padding:.3rem; }
+.mermaid { background: #fff; border-radius: 8px; padding: .5rem; }
+@media (max-width: 960px) { .panes { grid-template-columns: 1fr; } .raw { border-right:none; border-bottom:1px solid var(--border); } }
+@media print { .toolbar,.dropzone { display:none; } body { background:#fff; color:#000; } .card { break-inside: avoid; } }

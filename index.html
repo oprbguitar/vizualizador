@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="es" data-theme="dark">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,6 +12,15 @@
     <header class="header">
       <h1>Vizualizador Offline de Diagramas</h1>
       <p>Live editor + live preview: código a la izquierda, visualización a la derecha.</p>
+      <p>Live preview: código a la izquierda, visualización a la derecha.</p>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Vizualizador Offline de Diagramas</h1>
+      <p>
+        Carga, arrastra o pega archivos para verlos en paralelo y exportarlos.
+      </p>
     </header>
 
     <section class="toolbar">
@@ -24,6 +34,18 @@
     </section>
 
     <section id="dropzone" class="dropzone">Arrastra archivos aquí o usa el selector</section>
+      <button id="pickFolderBtn" type="button">Elegir carpeta de guardado</button>
+      <button id="clearBtn" type="button">Limpiar</button>
+      <button id="exportPdfBtn" type="button">Exportar PDF</button>
+      <button id="exportPdfBtn" type="button">Exportar PDF (imprimir)</button>
+      <button id="exportImgBtn" type="button">Exportar imagen (PNG)</button>
+      <span id="folderStatus">Carpeta: sin seleccionar</span>
+    </section>
+
+    <section id="dropzone" class="dropzone">Arrastra archivos aquí</section>
+    <section id="dropzone" class="dropzone" tabindex="0">
+      Arrastra archivos aquí o usa el selector.
+    </section>
 
     <main id="previewGrid" class="preview-grid"></main>
 
@@ -35,6 +57,7 @@
         </header>
         <div class="panes">
           <textarea class="raw" spellcheck="false"></textarea>
+          <pre class="raw"></pre>
           <section class="rendered"></section>
         </div>
       </article>
@@ -42,5 +65,6 @@
 
     <script src="assets/vendor/mermaid.min.js"></script>
     <script src="assets/js/app.js"></script>
+    <script src="app.js" type="module"></script>
   </body>
 </html>
