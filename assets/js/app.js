@@ -4,6 +4,7 @@
     'c4', 'mpp', 'csv', 'json', 'zen', 'bpmn', 'xml'
   ]);
 
+  const state = { folderHandle: null, selectedCard: null, mermaidCount: 0, theme: 'dark' };
   const state = { folderHandle: null, selectedCard: null, mermaidCount: 0 };
 
   const fileInput = document.getElementById('fileInput');
@@ -11,6 +12,7 @@
   const clearBtn = document.getElementById('clearBtn');
   const exportPdfBtn = document.getElementById('exportPdfBtn');
   const exportImgBtn = document.getElementById('exportImgBtn');
+  const themeBtn = document.getElementById('themeBtn');
   const folderStatus = document.getElementById('folderStatus');
   const previewGrid = document.getElementById('previewGrid');
   const dropzone = document.getElementById('dropzone');
@@ -20,6 +22,14 @@
   navigator.serviceWorker?.register('sw.js').catch(console.error);
 
   fileInput.addEventListener('change', async (e) => addFiles([...e.target.files]));
+  clearBtn.addEventListener('click', () => {
+    previewGrid.innerHTML = '';
+    state.selectedCard = null;
+  });
+  exportPdfBtn.addEventListener('click', () => window.print());
+  exportImgBtn.addEventListener('click', exportImage);
+  pickFolderBtn.addEventListener('click', pickFolder);
+  themeBtn.addEventListener('click', toggleTheme);
   clearBtn.addEventListener('click', () => (previewGrid.innerHTML = ''));
   exportPdfBtn.addEventListener('click', () => window.print());
   exportImgBtn.addEventListener('click', exportImage);
@@ -36,6 +46,15 @@
     await addFiles([...e.dataTransfer.files]);
   });
 
+  function toggleTheme() {
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', state.theme);
+    themeBtn.textContent = `Tema: ${state.theme === 'dark' ? 'Dark' : 'Light'}`;
+  }
+
+  async function addFiles(files) {
+    for (const file of files) {
+      const ext = getExtension(file.name);
   async function addFiles(files) {
     for (const file of files) {
       const ext = extension(file.name);
@@ -44,6 +63,9 @@
     }
   }
 
+  function getExtension(name) { return name.includes('.') ? name.split('.').pop().toLowerCase() : ''; }
+
+  function renderCard(item) {
   function extension(name) { return name.includes('.') ? name.split('.').pop().toLowerCase() : ''; }
 
   async function renderCard(item) {
@@ -54,6 +76,11 @@
 
     node.querySelector('.filename').textContent = item.file.name;
     node.querySelector('.meta').textContent = `${item.ext.toUpperCase()} • ${Math.max(1, Math.round(item.file.size / 1024))} KB`;
+    raw.value = item.text;
+
+    card.addEventListener('click', () => (state.selectedCard = card));
+    raw.addEventListener('input', () => renderByType(item.ext, raw.value, rendered));
+
     raw.textContent = item.text;
 
     card.addEventListener('click', () => (state.selectedCard = card));
@@ -61,6 +88,15 @@
     const cardRef = previewGrid.firstElementChild;
     if (!state.selectedCard) state.selectedCard = cardRef;
 
+    renderByType(item.ext, item.text, rendered);
+  }
+
+  async function renderByType(ext, text, container) {
+    if (ext === 'md') return renderMarkdown(text, container);
+    if (ext === 'mmd' || ext === 'mermaid') return renderMermaid(text, container);
+    if (ext === 'csv') return void (container.innerHTML = csvToTable(text));
+    if (ext === 'json') return void (container.innerHTML = `<pre>${escapeHtml(prettyJson(text))}</pre>`);
+    if (['xml', 'bpmn', 'drawio'].includes(ext)) return void (container.innerHTML = `<pre>${escapeHtml(formatXml(text))}</pre>`);
     await renderByType(item.ext, item.text, rendered);
   }
 
@@ -90,6 +126,16 @@
   }
 
   async function renderMarkdown(md, container) {
+    const { html, mermaidBlocks } = markdownToHtml(md);
+    container.innerHTML = html;
+    for (const block of mermaidBlocks) {
+      try {
+        const id = `merm-${Date.now()}-${state.mermaidCount++}`;
+        const { svg } = await mermaid.render(id, block.code);
+        container.innerHTML = container.innerHTML.replace(block.token, `<div class="mermaid">${svg}</div>`);
+      } catch {
+        container.innerHTML = container.innerHTML.replace(block.token, `<pre>${escapeHtml(block.code)}</pre>`);
+      }
     const mermaidBlocks = [];
     let idx = 0;
     const html = escapeHtml(md)
@@ -124,6 +170,123 @@
     }
   }
 
+  function markdownToHtml(md) {
+    const mermaidBlocks = [];
+    const lines = md.replace(/\r/g, '').split('\n');
+    const out = [];
+    let i = 0;
+    let inCode = false;
+    let codeLang = '';
+    let codeBuffer = [];
+
+    while (i < lines.length) {
+      const line = lines[i];
+
+      const fence = line.match(/^```\s*(\w+)?\s*$/);
+      if (fence) {
+        if (!inCode) {
+          inCode = true;
+          codeLang = (fence[1] || '').toLowerCase();
+          codeBuffer = [];
+        } else {
+          if (codeLang === 'mermaid' || codeLang === 'mmd') {
+            const token = `__MERMAID_${mermaidBlocks.length}__`;
+            mermaidBlocks.push({ token, code: codeBuffer.join('\n') });
+            out.push(token);
+          } else {
+            out.push(`<pre><code>${escapeHtml(codeBuffer.join('\n'))}</code></pre>`);
+          }
+          inCode = false;
+          codeLang = '';
+          codeBuffer = [];
+        }
+        i++;
+        continue;
+      }
+
+      if (inCode) {
+        codeBuffer.push(line);
+        i++;
+        continue;
+      }
+
+      if (/^\s*$/.test(line)) {
+        out.push('');
+        i++;
+        continue;
+      }
+
+      if (/^\|.+\|$/.test(line) && i + 1 < lines.length && /^\|[\s:-|]+\|$/.test(lines[i + 1])) {
+        const headers = splitPipeRow(line);
+        i += 2;
+        const body = [];
+        while (i < lines.length && /^\|.+\|$/.test(lines[i])) {
+          body.push(splitPipeRow(lines[i]));
+          i++;
+        }
+        let table = '<table><thead><tr>' + headers.map((h) => `<th>${inlineMd(h)}</th>`).join('') + '</tr></thead><tbody>';
+        body.forEach((row) => {
+          table += '<tr>' + headers.map((_, idx) => `<td>${inlineMd(row[idx] || '')}</td>`).join('') + '</tr>';
+        });
+        table += '</tbody></table>';
+        out.push(table);
+        continue;
+      }
+
+      if (/^---+$/.test(line.trim())) { out.push('<hr/>'); i++; continue; }
+      const h = line.match(/^(#{1,3})\s+(.*)$/);
+      if (h) { out.push(`<h${h[1].length}>${inlineMd(h[2])}</h${h[1].length}>`); i++; continue; }
+
+      const ul = line.match(/^\s*[-*]\s+(.*)$/);
+      if (ul) {
+        const items = [ul[1]];
+        i++;
+        while (i < lines.length) {
+          const m = lines[i].match(/^\s*[-*]\s+(.*)$/);
+          if (!m) break;
+          items.push(m[1]);
+          i++;
+        }
+        out.push('<ul>' + items.map((it) => `<li>${inlineMd(it)}</li>`).join('') + '</ul>');
+        continue;
+      }
+
+      const ol = line.match(/^\s*\d+\.\s+(.*)$/);
+      if (ol) {
+        const items = [ol[1]];
+        i++;
+        while (i < lines.length) {
+          const m = lines[i].match(/^\s*\d+\.\s+(.*)$/);
+          if (!m) break;
+          items.push(m[1]);
+          i++;
+        }
+        out.push('<ol>' + items.map((it) => `<li>${inlineMd(it)}</li>`).join('') + '</ol>');
+        continue;
+      }
+
+      out.push(`<p>${inlineMd(line)}</p>`);
+      i++;
+    }
+
+    return { html: out.join('\n'), mermaidBlocks };
+  }
+
+  function splitPipeRow(row) {
+    return row.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+  }
+
+  function inlineMd(text) {
+    return escapeHtml(text)
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  }
+
+  function csvToTable(csv) {
+    const rows = csv.trim().split(/\r?\n/).map((line) => line.split(','));
+    if (!rows.length || (rows.length === 1 && rows[0][0] === '')) return '<em>CSV vacío</em>';
   function csvToTable(csv) {
     const rows = csv.trim().split(/\r?\n/).map((line) => line.split(','));
     if (!rows.length) return '<em>CSV vacío</em>';
@@ -160,6 +323,14 @@
     canvas.width = 1600;
     canvas.height = 1000;
     const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0b1a35';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#e5ba58';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText(card.querySelector('.filename').textContent, 36, 52);
+    ctx.fillStyle = '#ecf2ff';
+    ctx.font = '16px monospace';
+    const lines = card.querySelector('.raw').value.split('\n');
     ctx.fillStyle = '#0b1220';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#22d3ee';
