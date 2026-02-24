@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vizualizador Offline</title>
     <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1>Vizualizador Offline de Diagramas</h1>
+      <p>Live preview: código a la izquierda, visualización a la derecha.</p>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -19,11 +25,13 @@
       <input id="fileInput" type="file" multiple />
       <button id="pickFolderBtn" type="button">Elegir carpeta de guardado</button>
       <button id="clearBtn" type="button">Limpiar</button>
+      <button id="exportPdfBtn" type="button">Exportar PDF</button>
       <button id="exportPdfBtn" type="button">Exportar PDF (imprimir)</button>
       <button id="exportImgBtn" type="button">Exportar imagen (PNG)</button>
       <span id="folderStatus">Carpeta: sin seleccionar</span>
     </section>
 
+    <section id="dropzone" class="dropzone">Arrastra archivos aquí</section>
     <section id="dropzone" class="dropzone" tabindex="0">
       Arrastra archivos aquí o usa el selector.
     </section>
@@ -43,6 +51,8 @@
       </article>
     </template>
 
+    <script src="assets/vendor/mermaid.min.js"></script>
+    <script src="assets/js/app.js"></script>
     <script src="app.js" type="module"></script>
   </body>
 </html>

@@ -1,3 +1,12 @@
+const CACHE = 'vizualizador-offline-v2';
+const ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  './assets/css/styles.css',
+  './assets/js/app.js',
+  './assets/vendor/mermaid.min.js'
+];
 const CACHE = 'vizualizador-offline-v1';
 const ASSETS = ['/', '/index.html', '/styles.css', '/app.js', '/manifest.json'];
 
