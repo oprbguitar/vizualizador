@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vizualizador Offline</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Vizualizador Offline de Diagramas</h1>
+      <p>
+        Carga, arrastra o pega archivos para verlos en paralelo y exportarlos.
+      </p>
+    </header>
+
+    <section class="toolbar">
+      <input id="fileInput" type="file" multiple />
+      <button id="pickFolderBtn" type="button">Elegir carpeta de guardado</button>
+      <button id="clearBtn" type="button">Limpiar</button>
+      <button id="exportPdfBtn" type="button">Exportar PDF (imprimir)</button>
+      <button id="exportImgBtn" type="button">Exportar imagen (PNG)</button>
+      <span id="folderStatus">Carpeta: sin seleccionar</span>
+    </section>
+
+    <section id="dropzone" class="dropzone" tabindex="0">
+      Arrastra archivos aquí o usa el selector.
+    </section>
+
+    <main id="previewGrid" class="preview-grid"></main>
+
+    <template id="previewTemplate">
+      <article class="card">
+        <header class="card-header">
+          <h2 class="filename"></h2>
+          <span class="meta"></span>
+        </header>
+        <div class="panes">
+          <pre class="raw"></pre>
+          <section class="rendered"></section>
+        </div>
+      </article>
+    </template>
+
+    <script src="app.js" type="module"></script>
+  </body>
+</html>
