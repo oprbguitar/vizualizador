@@ -1,0 +1,118 @@
+:root {
+  color-scheme: light dark;
+  --bg: #111827;
+  --card: #1f2937;
+  --border: #374151;
+  --text: #e5e7eb;
+  --accent: #22d3ee;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header, .toolbar, .dropzone { padding: 1rem 1.2rem; }
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+button, input[type="file"] {
+  background: #0f172a;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem;
+}
+
+button:hover { border-color: var(--accent); }
+
+.dropzone {
+  margin: 1rem;
+  border: 2px dashed var(--accent);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.dropzone.dragover { background: #164e63; }
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.filename {
+  margin: 0;
+  font-size: 0.95rem;
+  word-break: break-all;
+}
+
+.meta { font-size: 0.8rem; color: #93c5fd; }
+
+.panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 260px;
+}
+
+.raw, .rendered {
+  margin: 0;
+  padding: 0.8rem;
+  overflow: auto;
+  border-right: 1px solid var(--border);
+}
+
+.rendered {
+  border-right: none;
+  background: #111827;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+th, td {
+  border: 1px solid var(--border);
+  padding: 0.25rem;
+}
+
+@media print {
+  .toolbar, .dropzone { display: none; }
+  body { background: #fff; color: #000; }
+  .card { break-inside: avoid; border: 1px solid #aaa; }
+}
