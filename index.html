@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vizualizador Offline</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1>Vizualizador Offline</h1>
+      <p>Editor Markdown en vivo (estilo markdown live preview), Mermaid y exportación.</p>
+    </header>
+
+    <section class="toolbar">
+      <input id="fileInput" type="file" multiple />
+      <select id="fileSelect" title="Archivo activo"></select>
+      <button id="pickFolderBtn" type="button">Elegir carpeta</button>
+      <button id="saveBtn" type="button">Guardar</button>
+      <button id="clearBtn" type="button">Limpiar</button>
+      <button id="exportPdfBtn" type="button">Exportar PDF</button>
+      <button id="exportImgBtn" type="button">Exportar PNG</button>
+      <button id="themeBtn" type="button">Tema: Dark</button>
+      <span id="status">Listo</span>
+    </section>
+
+    <section id="dropzone" class="dropzone">Arrastra archivos aquí o usa el selector</section>
+
+    <main class="workspace">
+      <section class="panel">
+        <h2>Editor</h2>
+        <textarea id="editor" spellcheck="false" placeholder="Escribe Markdown aquí..."></textarea>
+      </section>
+      <section class="panel">
+        <h2>Preview</h2>
+        <article id="preview" class="preview markdown-body"></article>
+      </section>
+    </main>
+
+    <script src="assets/vendor/marked.min.js"></script>
+    <script src="assets/vendor/mermaid.min.js"></script>
+    <script src="assets/js/app.js"></script>
+  </body>
+</html>
