@@ -1,3 +1,11 @@
+const CACHE = 'vizualizador-offline-v4';
+const ASSETS = [
+  '/index.html',
+  '/manifest.json',
+  '/assets/css/styles.css',
+  '/assets/js/app.js',
+  '/assets/vendor/mermaid.min.js',
+  '/assets/vendor/marked.min.js'
 const CACHE = 'vizualizador-offline-v3';
 const CACHE = 'vizualizador-offline-v2';
 const ASSETS = [
@@ -15,6 +23,15 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))));
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(fetch(event.request).catch(() => caches.match('/index.html')));
+    return;
+  }
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
   );
