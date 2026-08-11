@@ -6,11 +6,14 @@
 
 **Escribe a la izquierda · mira el resultado a la derecha · sin internet, sin servidores, sin telemetría.**
 
-[![Licencia MIT](https://img.shields.io/badge/Licencia-MIT-eabf65?style=for-the-badge&labelColor=08142c)](LICENSE)
-[![PWA](https://img.shields.io/badge/PWA-instalable-7fd4ff?style=for-the-badge&labelColor=08142c&logo=pwa&logoColor=white)](#-instalar-como-app)
+[![Probar ahora](https://img.shields.io/badge/▶_Probar_ahora-oprbguitar.github.io/vizualizador-eabf65?style=for-the-badge&labelColor=08142c)](https://oprbguitar.github.io/vizualizador/)
+[![Licencia MIT](https://img.shields.io/badge/Licencia-MIT-7fd4ff?style=for-the-badge&labelColor=08142c)](LICENSE)
+[![PWA](https://img.shields.io/badge/PWA-instalable-b9812a?style=for-the-badge&labelColor=08142c&logo=pwa&logoColor=white)](#-instalar-como-app)
 [![Offline](https://img.shields.io/badge/Offline-100%25-57e0a5?style=for-the-badge&labelColor=08142c)](#-cómo-funciona-por-dentro)
-[![Sin build](https://img.shields.io/badge/Build-ninguno-b9812a?style=for-the-badge&labelColor=08142c)](#-arrancar-en-15-segundos)
+[![Sin build](https://img.shields.io/badge/Build-ninguno-a3b6db?style=for-the-badge&labelColor=08142c)](#-arrancar-en-15-segundos)
 [![Mermaid](https://img.shields.io/badge/Mermaid-11.12-ff70a6?style=for-the-badge&labelColor=08142c)](https://mermaid.js.org)
+
+### 🌐 Demo en vivo · **[oprbguitar.github.io/vizualizador](https://oprbguitar.github.io/vizualizador/)**
 
 ### 🔗 Repositorio · [github.com/oprbguitar/vizualizador](https://github.com/oprbguitar/vizualizador)
 
@@ -59,7 +62,38 @@ abres `index.html` y funciona. Sin `npm install`, sin bundler, sin backend, sin 
 
 ---
 
+## 🌐 Usarlo sin instalar nada
+
+Está publicado en GitHub Pages:
+
+### ▶ **<https://oprbguitar.github.io/vizualizador/>**
+
+Visítalo una vez y el Service Worker se queda con la app: a partir de ahí **abre
+igual sin conexión**, y desde el icono de la barra de direcciones puedes
+instalarlo como aplicación de escritorio.
+
+<details>
+<summary><b>Cómo se publica</b> (y cómo activarlo en un fork)</summary>
+
+<br />
+
+El despliegue vive en [`.github/workflows/pages.yml`](.github/workflows/pages.yml).
+No hay compilación: se sube el repositorio tal cual, porque la app ya es estática.
+
+1. En el repositorio: **Settings → Pages**.
+2. En *Build and deployment*, elige **Source: GitHub Actions**.
+3. Cada `push` a `main` publica solo. También puedes lanzarlo a mano desde
+   **Actions → Desplegar en GitHub Pages → Run workflow**, incluso desde otra rama.
+
+El archivo `.nojekyll` evita que Jekyll toque los ficheros al publicarlos.
+
+</details>
+
+---
+
 ## 🚀 Arrancar en 15 segundos
+
+¿Prefieres tenerlo en tu equipo?
 
 ```bash
 git clone https://github.com/oprbguitar/vizualizador.git
@@ -218,6 +252,9 @@ vizualizador/
 ├── manifest.json           → metadatos PWA
 ├── sw.js                   → Service Worker (cache-first, v5)
 ├── LICENSE                 → MIT
+├── .nojekyll               → publica los ficheros sin procesar
+├── .github/workflows/
+│   └── pages.yml           → despliegue automático en GitHub Pages
 └── assets/
     ├── css/styles.css      → paleta azul + dorado, dark/light, animaciones
     ├── js/app.js           → editor, render, estadísticas, exportación
@@ -232,7 +269,7 @@ vizualizador/
 
 ## 📱 Instalar como app
 
-1. Sirve el proyecto por `http://` o `https://` (paso anterior).
+1. Abre <https://oprbguitar.github.io/vizualizador/> (o sírvelo en local por `http://`).
 2. En Chrome/Edge, pulsa el icono **Instalar** de la barra de direcciones.
 3. Se abre en ventana propia y, gracias al Service Worker, **arranca sin red**.
 
