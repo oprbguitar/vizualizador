@@ -140,9 +140,9 @@
   function restaurar() {
     try {
       const bruto = localStorage.getItem(CLAVE_ARCHIVOS);
-      if (!bruto) return false;
+      if (!bruto) return migrarAlmacenAntiguo();
       const datos = JSON.parse(bruto);
-      if (!Array.isArray(datos.archivos) || !datos.archivos.length) return false;
+      if (!Array.isArray(datos.archivos) || !datos.archivos.length) return migrarAlmacenAntiguo();
       store.archivos = datos.archivos;
       store.activoId = datos.archivos.some((a) => a.id === datos.activoId)
         ? datos.activoId
@@ -151,6 +151,35 @@
     } catch {
       return false;
     }
+  }
+
+  /* Rescata los documentos guardados por versiones anteriores de la app, para
+     que nada de lo que hubieras escrito se quede olvidado en el navegador. */
+  function migrarAlmacenAntiguo() {
+    const antiguas = ['vizualizador:workspace:v2', 'vizualizador:workspace'];
+    for (const clave of antiguas) {
+      try {
+        const bruto = localStorage.getItem(clave);
+        if (!bruto) continue;
+        const datos = JSON.parse(bruto);
+        const previos = Array.isArray(datos.files) ? datos.files : datos.archivos;
+        if (!Array.isArray(previos) || !previos.length) continue;
+
+        store.archivos = previos.map((archivo) => ({
+          id: archivo.id || uid(),
+          nombre: archivo.nombre || archivo.name || 'documento.md',
+          ext: archivo.ext || extension(archivo.nombre || archivo.name || 'documento.md'),
+          texto: archivo.texto ?? archivo.text ?? ''
+        }));
+        store.activoId = store.archivos[0].id;
+        persistir();
+        util.aviso(`Recuperados ${store.archivos.length} documento(s) de una versión anterior`, 'ok');
+        return true;
+      } catch {
+        /* clave ilegible: probamos la siguiente */
+      }
+    }
+    return false;
   }
 
   /* ----------------------------------------------------------- utilidades */
