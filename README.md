@@ -1,75 +1,324 @@
-# Vizualizador Offline (Chrome)
+<div align="center">
 
-Editor y preview en vivo para Markdown (similar a markdownlivepreview), con Mermaid y modo offline.
+<img src="assets/img/banner.svg" alt="Vizualizador Offline — editor Markdown en vivo con diagramas Mermaid" width="100%" />
 
-## Mejoras clave
+<br />
 
-- Interfaz limpia de 2 paneles fijos: **Editor** y **Preview** (sin tarjetas repetidas).
-- Render Markdown robusto con `marked` (GFM: tablas, listas, encabezados, etc.).
-- Mermaid en vivo para bloques ```mermaid``` dentro de `.md` y archivos `.mmd/.mermaid`.
-- Paleta azul + dorado con alternancia Dark/Light.
-- Guardado del archivo activo (descarga o carpeta elegida en Chrome).
-- Offline con Service Worker (`sw.js` v4) y limpieza de cachés antiguas.
-App offline para visualizar diagramas y documentos con **live editor + live preview**.
+**Escribe a la izquierda · mira el resultado a la derecha · sin internet, sin servidores, sin telemetría.**
 
-## Mejoras implementadas
+[![Probar ahora](https://img.shields.io/badge/▶_Probar_ahora-oprbguitar.github.io/vizualizador-eabf65?style=for-the-badge&labelColor=08142c)](https://oprbguitar.github.io/vizualizador/)
+[![Licencia MIT](https://img.shields.io/badge/Licencia-MIT-7fd4ff?style=for-the-badge&labelColor=08142c)](LICENSE)
+[![PWA](https://img.shields.io/badge/PWA-instalable-b9812a?style=for-the-badge&labelColor=08142c&logo=pwa&logoColor=white)](#-instalar-como-app)
+[![Offline](https://img.shields.io/badge/Offline-100%25-57e0a5?style=for-the-badge&labelColor=08142c)](#-cómo-funciona-por-dentro)
+[![Sin build](https://img.shields.io/badge/Build-ninguno-a3b6db?style=for-the-badge&labelColor=08142c)](#-arrancar-en-15-segundos)
+[![Mermaid](https://img.shields.io/badge/Mermaid-11.12-ff70a6?style=for-the-badge&labelColor=08142c)](https://mermaid.js.org)
 
-- Estructura ordenada: `assets/css`, `assets/js`, `assets/vendor`.
-- Vista paralela real: editor a la izquierda y preview a la derecha.
-- Markdown mejorado para tablas (`| col |`), listas, encabezados, enlaces, código y bloques Mermaid.
-- Tema azul/dorado con interruptor **Dark/Light**.
-- Service Worker actualizado para evitar caché vieja y duplicados visuales.
-Ahora el proyecto está **organizado por carpetas** y con **live preview real** para Mermaid.
+### 🌐 Demo en vivo · **[oprbguitar.github.io/vizualizador](https://oprbguitar.github.io/vizualizador/)**
 
-## Estructura
+### 🔗 Repositorio · [github.com/oprbguitar/vizualizador](https://github.com/oprbguitar/vizualizador)
 
-- `index.html`
-- `assets/css/styles.css`
-- `assets/js/app.js`
-- `assets/vendor/mermaid.min.js`
-- `sw.js`
-- `manifest.json`
+</div>
 
-## Qué funciona
+---
 
-- Vista paralela por archivo: **código a la izquierda + visualizador a la derecha**.
-- Drag & drop y selector de archivos.
-- Live preview Mermaid para `.mmd`, `.mermaid` y bloques Mermaid dentro de `.md`.
-- Preview para `.csv`, `.json`, `.xml`, `.drawio`, `.bpmn` y textual para otros formatos.
-- Exportar PDF (impresión) y PNG.
-- Guardado en carpeta elegida en Chrome (File System Access API).
-- Funciona offline con Service Worker.
-Aplicación web local (PWA) para Chrome con soporte offline para cargar archivos de diagramas, ver **raw + preview en paralelo**, y exportar a PDF/PNG.
+## ✨ Qué es esto
 
-## Soporte implementado (MVP)
+Un **editor Markdown con live preview** —al estilo *markdownlivepreview*— que además dibuja
+**diagramas Mermaid en vivo** y sabe leer CSV, JSON y XML. Todo cabe en una carpeta:
+abres `index.html` y funciona. Sin `npm install`, sin bundler, sin backend, sin cuenta.
 
-Se priorizaron formatos realistas sin librerías externas, para garantizar uso offline:
+> [!TIP]
+> Los motores de render (`marked` y `mermaid`) viajan **dentro del repositorio**.
+> Por eso el avión, el sótano y el aula sin wifi son escenarios perfectamente válidos.
 
-- Texto/diagramas (preview textual): `.mmd`, `.mermaid`, `.puml`, `.c4`, `.erd`, `.sql`, `.zen`, `.mpp`, `.vsdx`, `.mm`, `.xmind`
-- Markdown render básico: `.md`
-- Tabla / datos: `.csv`, `.json`
-- XML-like: `.drawio`, `.bpmn`, `.xml`
+<div align="center">
 
-> Formatos binarios propietarios (`.fig`, `.sketch`, `.xd`, `.psd`, `.mpp` real binario, `.vsdx` complejo) se cargan como texto sólo si el archivo es legible. Si no, quedan fuera del render avanzado.
+|  |  |
+| :-- | :-- |
+| ⌨️ **Escribes** | El editor cuenta líneas, palabras, encabezados y diagramas al vuelo |
+| ⚡ **Se renderiza** | Debounce de 120 ms: el preview te sigue sin parpadear |
+| 🎨 **Lo ves bonito** | Tema oscuro/claro, zoom, scroll sincronizado, paneles redimensionables |
+| 📤 **Te lo llevas** | PDF por impresión, PNG rasterizado del diagrama, o guardado directo en tu carpeta |
 
-## Funciones
+</div>
 
-- Arrastrar y soltar archivos.
-- Visualización paralela por archivo (raw + render).
-- Live preview al cargar.
-- Exportar a PDF usando impresión del navegador.
-- Exportar PNG del panel seleccionado.
-- Selección de carpeta de salida mediante File System Access API (Chrome).
-- Funcionamiento offline con Service Worker.
+---
 
-## Ejecutar
+## 🖼️ Así se ve
+
+<div align="center">
+
+<img src="assets/img/captura-dark.png" alt="Vizualizador Offline en tema oscuro con un diagrama Mermaid renderizado" width="86%" />
+
+<sub>Tema oscuro · Markdown con diagrama Mermaid renderizado en vivo</sub>
+
+<br /><br />
+
+<img src="assets/img/captura-light.png" alt="Vizualizador Offline en tema claro" width="86%" />
+
+<sub>Tema claro · el mismo documento, un clic después (o `Ctrl + D`)</sub>
+
+</div>
+
+---
+
+## 🌐 Usarlo sin instalar nada
+
+Está publicado en GitHub Pages:
+
+### ▶ **<https://oprbguitar.github.io/vizualizador/>**
+
+Visítalo una vez y el Service Worker se queda con la app: a partir de ahí **abre
+igual sin conexión**, y desde el icono de la barra de direcciones puedes
+instalarlo como aplicación de escritorio.
+
+<details>
+<summary><b>Cómo se publica</b> (y cómo activarlo en un fork)</summary>
+
+<br />
+
+El despliegue vive en [`.github/workflows/pages.yml`](.github/workflows/pages.yml).
+No hay compilación: se sube el repositorio tal cual, porque la app ya es estática.
+
+1. En el repositorio: **Settings → Pages**.
+2. En *Build and deployment*, elige **Source: GitHub Actions**.
+3. Cada `push` a `main` publica solo. También puedes lanzarlo a mano desde
+   **Actions → Desplegar en GitHub Pages → Run workflow**, incluso desde otra rama.
+
+El archivo `.nojekyll` evita que Jekyll toque los ficheros al publicarlos.
+
+</details>
+
+---
+
+## 🚀 Arrancar en 15 segundos
+
+¿Prefieres tenerlo en tu equipo?
 
 ```bash
+git clone https://github.com/oprbguitar/vizualizador.git
+cd vizualizador
 python3 -m http.server 8080
 ```
 
-Abrir `http://localhost:8080` en Chrome.
+Abre **<http://localhost:8080>** en Chrome o Edge. Listo.
 
-## Nota
+<details>
+<summary><b>¿Sin Python a mano?</b> Otras formas de servirlo</summary>
 
-Para instalar como “app de Chrome”, usa **Instalar aplicación** desde la barra de direcciones cuando Chrome detecte la PWA.
+<br />
+
+```bash
+npx serve .          # Node
+php -S localhost:8080 # PHP
+```
+
+También puedes abrir `index.html` con doble clic: todo funciona **excepto**
+el Service Worker (necesita `http://` o `https://`, no `file://`).
+
+</details>
+
+---
+
+## 🎛️ Panel de mandos
+
+<div align="center">
+
+| Botón | Qué hace | Atajo |
+| :-: | :-- | :-: |
+| 📂 **Abrir** | Carga uno o varios archivos (o arrástralos sobre la ventana) | — |
+| ✨ **Nuevo** | Crea una pestaña en blanco | — |
+| 🎬 **Demo** | Documento de bienvenida con diagramas y tablas de ejemplo | — |
+| 💾 **Guardar** | Escribe en tu carpeta elegida, o descarga el archivo | `Ctrl + S` |
+| 🗂️ **Carpeta** | Elige destino con la *File System Access API* | — |
+| 🖨️ **PDF** | Exporta el preview limpio mediante la impresión del navegador | `Ctrl + P` |
+| 🖼️ **PNG** | Rasteriza el diagrama Mermaid a PNG 2× (o el texto, si no hay diagrama) | — |
+| 🌙 **Tema** | Alterna oscuro / claro (y reconstruye los diagramas) | `Ctrl + D` |
+| 🔍 **Zoom** | Acerca o aleja solo el preview | `Ctrl + Shift + Z` para restablecer |
+| 🧹 **Limpiar** | Cierra todas las pestañas | — |
+
+</div>
+
+---
+
+## 🧠 Cómo funciona por dentro
+
+```mermaid
+flowchart LR
+  subgraph ENTRADA
+    A1([Tecleo en el editor])
+    A2([Drag & drop])
+    A3([Selector de archivos])
+  end
+
+  A1 & A2 & A3 --> B[/"debounce 120 ms"/]
+  B --> C{Extensión del archivo}
+
+  C -->|.md| D["marked · GFM<br/>+ bloques mermaid"]
+  C -->|.mmd .mermaid| E["Mermaid 11"]
+  C -->|.csv .tsv| F["Parser con comillas<br/>→ tabla"]
+  C -->|.json| G["Árbol plegable"]
+  C -->|.xml .bpmn .drawio| H["Formateo + color"]
+  C -->|otros| I["Vista textual<br/>numerada"]
+
+  D & E & F & G & H & I --> J[["Preview en vivo"]]
+  J --> K{{"PDF · PNG · Guardar"}}
+  J --> L[/"Estadísticas del documento"/]
+
+  style J fill:#eabf65,stroke:#b9812a,color:#08142c
+  style K fill:#17345f,stroke:#2a4679,color:#eaf1ff
+```
+
+El ciclo completo de una pulsación de tecla:
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Tú
+  participant E as Editor
+  participant R as Motor de render
+  participant P as Preview
+  participant S as Estadísticas
+
+  Tú->>E: escribes una línea
+  E->>E: guarda el buffer + numera líneas
+  E-)R: render (debounce 120 ms)
+  R->>R: marked → HTML
+  R->>R: cada bloque mermaid → SVG
+  R--)P: reemplaza el contenido (fade-in)
+  R--)S: caracteres · palabras · diagramas · tiempo de lectura
+  Note over P,S: si un diagrama falla,<br/>se muestra el error sin romper el resto
+```
+
+---
+
+## 📚 Formatos soportados
+
+<details open>
+<summary><b>Con render gráfico</b></summary>
+
+<br />
+
+| Extensión | Qué obtienes |
+| :-- | :-- |
+| `.md` `.markdown` | Markdown GFM completo: tablas, listas, citas, código, enlaces… y **diagramas Mermaid embebidos** |
+| `.mmd` `.mermaid` | El diagrama a pantalla completa, redibujado mientras escribes |
+| `.csv` `.tsv` | Tabla con detección automática de delimitador (`,` `;` `tab` `\|`) y soporte de comillas |
+| `.json` | Árbol plegable con colores por tipo y recuento de nodos |
+| `.xml` `.bpmn` `.drawio` | XML indentado, con etiquetas y atributos coloreados |
+
+</details>
+
+<details>
+<summary><b>Con vista textual numerada</b></summary>
+
+<br />
+
+`.puml` · `.c4` · `.erd` · `.sql` · `.zen` · `.mm` · `.xmind` · `.mpp` · `.vsdx` · `.txt`
+
+Estos formatos se abren como texto legible con numeración de líneas. Los binarios
+propietarios (`.fig`, `.sketch`, `.psd`, `.vsdx` comprimido…) **no** se decodifican:
+el objetivo es no arrastrar dependencias pesadas y seguir funcionando sin conexión.
+
+</details>
+
+<details>
+<summary><b>Sintaxis Mermaid que puedes usar</b></summary>
+
+<br />
+
+Mermaid 11 viaja completo en el repo, así que tienes `flowchart`, `sequenceDiagram`,
+`classDiagram`, `stateDiagram`, `erDiagram`, `journey`, `gantt`, `pie`, `mindmap`,
+`timeline`, `quadrantChart`, `gitGraph` y más. Dentro de un `.md` basta con:
+
+````markdown
+```mermaid
+flowchart TD
+  A[Idea] --> B{¿Funciona?}
+  B -->|Sí| C[Publicar]
+  B -->|No| A
+```
+````
+
+</details>
+
+---
+
+## 🗂️ Estructura del proyecto
+
+```text
+vizualizador/
+├── index.html              → la app entera (un solo documento)
+├── manifest.json           → metadatos PWA
+├── sw.js                   → Service Worker (cache-first, v5)
+├── LICENSE                 → MIT
+├── .nojekyll               → publica los ficheros sin procesar
+├── .github/workflows/
+│   └── pages.yml           → despliegue automático en GitHub Pages
+└── assets/
+    ├── css/styles.css      → paleta azul + dorado, dark/light, animaciones
+    ├── js/app.js           → editor, render, estadísticas, exportación
+    ├── icons/icon.svg      → icono de la PWA
+    ├── img/                → banner animado y capturas
+    └── vendor/
+        ├── marked.min.js   → Markdown (MIT)
+        └── mermaid.min.js  → diagramas (MIT)
+```
+
+---
+
+## 📱 Instalar como app
+
+1. Abre <https://oprbguitar.github.io/vizualizador/> (o sírvelo en local por `http://`).
+2. En Chrome/Edge, pulsa el icono **Instalar** de la barra de direcciones.
+3. Se abre en ventana propia y, gracias al Service Worker, **arranca sin red**.
+
+> [!NOTE]
+> La *File System Access API* (botón **Carpeta**) solo existe en Chrome y Edge de
+> escritorio. En el resto de navegadores, **Guardar** descarga el archivo — mismo
+> resultado, un clic más.
+
+---
+
+## 🔒 Privacidad
+
+Nada viaja a ningún sitio. No hay peticiones de red, ni analítica, ni CDN externo.
+Tus documentos viven en la memoria del navegador y, si no los cierras, en el
+`localStorage` de tu propio equipo para que la sesión sobreviva a un refresco.
+
+---
+
+## 🗺️ Roadmap
+
+- [x] Editor + preview en paralelo con scroll sincronizado
+- [x] Mermaid en vivo dentro de Markdown y en archivos `.mmd`
+- [x] Tema oscuro/claro persistente
+- [x] Pestañas multiarchivo y sesión restaurable
+- [x] Exportación PDF y PNG (rasterizado real del SVG)
+- [ ] Resaltado de sintaxis dentro del editor
+- [ ] Índice navegable de encabezados
+- [ ] Exportar a HTML autocontenido
+
+¿Se te ocurre algo más? Abre un
+[issue](https://github.com/oprbguitar/vizualizador/issues) o manda un
+[pull request](https://github.com/oprbguitar/vizualizador/pulls).
+
+---
+
+## 📄 Licencia
+
+Publicado bajo la **[Licencia MIT](LICENSE)**: úsalo, modifícalo, véndelo si quieres;
+solo conserva el aviso de copyright. Las librerías incluidas en `assets/vendor/`
+([marked](https://github.com/markedjs/marked) y
+[mermaid](https://github.com/mermaid-js/mermaid)) también son MIT.
+
+<div align="center">
+
+<br />
+
+**⭐ Si te resulta útil, deja una estrella en
+[github.com/oprbguitar/vizualizador](https://github.com/oprbguitar/vizualizador)**
+
+<sub>Hecho con HTML, CSS y JavaScript a secas. Ni un solo paquete que instalar.</sub>
+
+</div>

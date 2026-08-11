@@ -1,94 +1,144 @@
 <!doctype html>
 <html lang="es" data-theme="dark">
-<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vizualizador Offline</title>
+    <meta name="description" content="Editor Markdown y visualizador de diagramas Mermaid con live preview, 100% offline." />
+    <meta name="theme-color" content="#08142c" />
+    <title>Vizualizador Offline · Live Preview</title>
     <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="assets/css/styles.css" />
   </head>
   <body>
+    <div id="progress" class="progress" aria-hidden="true"></div>
+
     <header class="header">
-      <h1>Vizualizador Offline</h1>
-      <p>Editor Markdown en vivo (estilo markdown live preview), Mermaid y exportación.</p>
-      <h1>Vizualizador Offline de Diagramas</h1>
-      <p>Live editor + live preview: código a la izquierda, visualización a la derecha.</p>
-      <p>Live preview: código a la izquierda, visualización a la derecha.</p>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <header>
-      <h1>Vizualizador Offline de Diagramas</h1>
-      <p>
-        Carga, arrastra o pega archivos para verlos en paralelo y exportarlos.
-      </p>
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">◈</span>
+        <div>
+          <h1>Vizualizador <span class="grad">Offline</span></h1>
+          <p class="tagline">
+            Escribe a la izquierda · <span class="tagline-accent">mira el resultado a la derecha</span> ·
+            sin internet, sin servidores, sin telemetría.
+          </p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <span class="pill pill-live"><i class="dot"></i> Live preview</span>
+        <span class="pill" id="netPill" title="Estado de conexión">Offline ready</span>
+        <button id="themeBtn" class="btn btn-ghost" type="button" title="Cambiar tema (Ctrl+D)">
+          <span class="btn-ico">🌙</span><span class="btn-label">Dark</span>
+        </button>
+      </div>
     </header>
 
-    <section class="toolbar">
-      <input id="fileInput" type="file" multiple />
-      <select id="fileSelect" title="Archivo activo"></select>
-      <button id="pickFolderBtn" type="button">Elegir carpeta</button>
-      <button id="saveBtn" type="button">Guardar</button>
-      <button id="pickFolderBtn" type="button">Elegir carpeta</button>
-      <button id="clearBtn" type="button">Limpiar</button>
-      <button id="exportPdfBtn" type="button">Exportar PDF</button>
-      <button id="exportImgBtn" type="button">Exportar PNG</button>
-      <button id="themeBtn" type="button">Tema: Dark</button>
-      <span id="status">Listo</span>
+    <section class="toolbar" aria-label="Barra de herramientas">
+      <label class="btn btn-primary" for="fileInput" title="Abrir archivos">
+        <span class="btn-ico">📂</span><span class="btn-label">Abrir</span>
+      </label>
+      <input id="fileInput" type="file" multiple hidden />
+
+      <button id="newBtn" class="btn" type="button" title="Nuevo documento">
+        <span class="btn-ico">✨</span><span class="btn-label">Nuevo</span>
+      </button>
+      <button id="demoBtn" class="btn" type="button" title="Cargar documento de demostración">
+        <span class="btn-ico">🎬</span><span class="btn-label">Demo</span>
+      </button>
+
+      <span class="toolbar-sep" aria-hidden="true"></span>
+
+      <button id="saveBtn" class="btn" type="button" title="Guardar archivo activo (Ctrl+S)">
+        <span class="btn-ico">💾</span><span class="btn-label">Guardar</span>
+      </button>
+      <button id="pickFolderBtn" class="btn" type="button" title="Elegir carpeta de destino (Chrome)">
+        <span class="btn-ico">🗂️</span><span class="btn-label">Carpeta</span>
+      </button>
+      <button id="exportPdfBtn" class="btn" type="button" title="Exportar a PDF mediante impresión (Ctrl+P)">
+        <span class="btn-ico">🖨️</span><span class="btn-label">PDF</span>
+      </button>
+      <button id="exportImgBtn" class="btn" type="button" title="Exportar el preview a PNG">
+        <span class="btn-ico">🖼️</span><span class="btn-label">PNG</span>
+      </button>
+
+      <span class="toolbar-sep" aria-hidden="true"></span>
+
+      <div class="zoom" role="group" aria-label="Zoom del preview">
+        <button id="zoomOutBtn" class="btn btn-icon" type="button" title="Alejar preview">−</button>
+        <button id="zoomResetBtn" class="btn btn-icon btn-zoom-label" type="button" title="Restablecer zoom">100%</button>
+        <button id="zoomInBtn" class="btn btn-icon" type="button" title="Acercar preview">+</button>
+      </div>
+
+      <button id="clearBtn" class="btn btn-danger" type="button" title="Cerrar todos los archivos">
+        <span class="btn-ico">🧹</span><span class="btn-label">Limpiar</span>
+      </button>
+
+      <span id="status" class="status" role="status">Listo</span>
     </section>
 
-    <section id="dropzone" class="dropzone">Arrastra archivos aquí o usa el selector</section>
+    <nav id="tabs" class="tabs" aria-label="Archivos abiertos"></nav>
 
-    <main class="workspace">
-      <section class="panel">
-        <h2>Editor</h2>
-        <textarea id="editor" spellcheck="false" placeholder="Escribe Markdown aquí..."></textarea>
+    <main class="workspace" id="workspace">
+      <section class="panel panel-editor">
+        <header class="panel-head">
+          <h2><span class="panel-ico">✍️</span> Editor</h2>
+          <div class="panel-meta">
+            <span id="fileBadge" class="badge">MD</span>
+            <span id="cursorInfo" class="muted">Ln 1, Col 1</span>
+          </div>
+        </header>
+        <div class="editor-wrap">
+          <div id="gutter" class="gutter" aria-hidden="true"></div>
+          <textarea
+            id="editor"
+            spellcheck="false"
+            autocomplete="off"
+            placeholder="Escribe Markdown aquí…  Prueba un bloque ```mermaid```"
+          ></textarea>
+        </div>
       </section>
-      <section class="panel">
-        <h2>Preview</h2>
-        <article id="preview" class="preview markdown-body"></article>
+
+      <div id="splitter" class="splitter" role="separator" aria-orientation="vertical" tabindex="0" title="Arrastra para redimensionar"></div>
+
+      <section class="panel panel-preview">
+        <header class="panel-head">
+          <h2><span class="panel-ico">👁️</span> Preview</h2>
+          <div class="panel-meta">
+            <label class="switch" title="Sincronizar el scroll entre editor y preview">
+              <input id="syncScroll" type="checkbox" checked />
+              <span>Sync scroll</span>
+            </label>
+            <span id="renderTime" class="badge badge-soft">0 ms</span>
+          </div>
+        </header>
+        <article id="preview" class="preview markdown-body" tabindex="0"></article>
       </section>
     </main>
+
+    <footer class="statsbar" aria-label="Estadísticas del documento">
+      <span class="stat" data-stat="chars"><b id="statChars">0</b> caracteres</span>
+      <span class="stat" data-stat="words"><b id="statWords">0</b> palabras</span>
+      <span class="stat" data-stat="lines"><b id="statLines">0</b> líneas</span>
+      <span class="stat" data-stat="headings"><b id="statHeadings">0</b> encabezados</span>
+      <span class="stat" data-stat="tables"><b id="statTables">0</b> tablas</span>
+      <span class="stat" data-stat="diagrams"><b id="statDiagrams">0</b> diagramas</span>
+      <span class="stat" data-stat="read"><b id="statRead">0</b> min de lectura</span>
+      <span class="stat stat-right" id="statFolder">Carpeta: sin seleccionar</span>
+    </footer>
+
+    <div id="dropzone" class="dropzone" aria-hidden="true">
+      <div class="dropzone-inner">
+        <span class="dropzone-ico">⬇️</span>
+        <strong>Suelta tus archivos aquí</strong>
+        <small>.md · .mmd · .mermaid · .csv · .json · .xml · .bpmn · .drawio · .puml · .sql …</small>
+      </div>
+    </div>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
 
     <script src="assets/vendor/marked.min.js"></script>
     <script src="assets/vendor/mermaid.min.js"></script>
     <script src="assets/js/app.js"></script>
-      <span id="folderStatus">Carpeta: sin seleccionar</span>
-    </section>
-
-    <section id="dropzone" class="dropzone">Arrastra archivos aquí o usa el selector</section>
-      <button id="pickFolderBtn" type="button">Elegir carpeta de guardado</button>
-      <button id="clearBtn" type="button">Limpiar</button>
-      <button id="exportPdfBtn" type="button">Exportar PDF</button>
-      <button id="exportPdfBtn" type="button">Exportar PDF (imprimir)</button>
-      <button id="exportImgBtn" type="button">Exportar imagen (PNG)</button>
-      <span id="folderStatus">Carpeta: sin seleccionar</span>
-    </section>
-
-    <section id="dropzone" class="dropzone">Arrastra archivos aquí</section>
-    <section id="dropzone" class="dropzone" tabindex="0">
-      Arrastra archivos aquí o usa el selector.
-    </section>
-
-    <main id="previewGrid" class="preview-grid"></main>
-
-    <template id="previewTemplate">
-      <article class="card">
-        <header class="card-header">
-          <h2 class="filename"></h2>
-          <span class="meta"></span>
-        </header>
-        <div class="panes">
-          <textarea class="raw" spellcheck="false"></textarea>
-          <pre class="raw"></pre>
-          <section class="rendered"></section>
-        </div>
-      </article>
-    </template>
-
-    <script src="assets/vendor/mermaid.min.js"></script>
-    <script src="assets/js/app.js"></script>
-    <script src="app.js" type="module"></script>
   </body>
 </html>

@@ -1,48 +1,58 @@
-const CACHE = 'vizualizador-offline-v4';
-const ASSETS = [
-  '/index.html',
-  '/manifest.json',
-  '/assets/css/styles.css',
-  '/assets/js/app.js',
-  '/assets/vendor/mermaid.min.js',
-  '/assets/vendor/marked.min.js'
-const CACHE = 'vizualizador-offline-v3';
-const CACHE = 'vizualizador-offline-v2';
+/* Service Worker — Vizualizador Offline
+   Estrategia: cache-first para los recursos propios, con red como respaldo.
+   Al activar una versión nueva se borran todas las cachés anteriores. */
+
+const CACHE = 'vizualizador-offline-v5';
+
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './assets/css/styles.css',
   './assets/js/app.js',
+  './assets/icons/icon.svg',
+  './assets/vendor/marked.min.js',
   './assets/vendor/mermaid.min.js'
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))));
-  self.clients.claim();
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.mode === 'navigate') {
-    event.respondWith(fetch(event.request).catch(() => caches.match('/index.html')));
+  const { request } = event;
+  if (request.method !== 'GET') return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => caches.match('./index.html', { ignoreSearch: true }))
+    );
     return;
   }
-  event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+
+  event.respondWith(
+    caches.match(request, { ignoreSearch: true }).then((cached) => {
+      if (cached) return cached;
+      return fetch(request)
+        .then((response) => {
+          if (response.ok && new URL(request.url).origin === self.location.origin) {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => cached);
+    })
   );
-  self.clients.claim();
-const CACHE = 'vizualizador-offline-v1';
-const ASSETS = ['/', '/index.html', '/styles.css', '/app.js', '/manifest.json'];
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
-});
-
-self.addEventListener('fetch', (event) => {
-  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
 });

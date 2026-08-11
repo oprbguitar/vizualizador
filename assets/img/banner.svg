@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Vizualizador Offline — editor Markdown con live preview y Mermaid">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1c39" />
+      <stop offset="0.55" stop-color="#0e2244" />
+      <stop offset="1" stop-color="#08142c" />
+    </linearGradient>
+
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#eabf65" />
+      <stop offset="0.45" stop-color="#ffffff" />
+      <stop offset="0.9" stop-color="#7fd4ff" />
+      <animateTransform attributeName="gradientTransform" type="translate"
+        values="-1 0; 1 0; -1 0" dur="7s" repeatCount="indefinite" />
+    </linearGradient>
+
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eabf65" />
+      <stop offset="1" stop-color="#b9812a" />
+    </linearGradient>
+
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#eabf65" stop-opacity="0.35" />
+      <stop offset="1" stop-color="#eabf65" stop-opacity="0" />
+    </radialGradient>
+
+    <style>
+      .t  { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; }
+      .h1 { font-size: 62px; font-weight: 800; letter-spacing: -1px; }
+      .sub{ font-size: 22px; fill: #a3b6db; }
+      .mono { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 15px; fill: #a3b6db; }
+      .chip { font-size: 15px; font-weight: 600; fill: #08142c; }
+    </style>
+  </defs>
+
+  <!-- fondo -->
+  <rect width="1200" height="300" rx="24" fill="url(#sky)" />
+  <ellipse cx="180" cy="60" rx="320" ry="180" fill="url(#glow)">
+    <animate attributeName="cx" values="180;420;180" dur="14s" repeatCount="indefinite" />
+  </ellipse>
+
+  <!-- rejilla sutil -->
+  <g stroke="#17345f" stroke-width="1" opacity="0.5">
+    <path d="M0 75h1200M0 150h1200M0 225h1200" />
+    <path d="M150 0v300M450 0v300M750 0v300M1050 0v300" />
+  </g>
+
+  <!-- título -->
+  <text class="t h1" x="64" y="120" fill="url(#shine)">Vizualizador Offline</text>
+  <text class="t sub" x="66" y="160">Editor Markdown en vivo · Diagramas Mermaid · Cero conexión</text>
+
+  <!-- píldoras -->
+  <g>
+    <rect x="66" y="192" width="132" height="34" rx="17" fill="url(#gold)" />
+    <text class="t chip" x="88" y="214">✦ Live preview</text>
+
+    <rect x="210" y="192" width="118" height="34" rx="17" fill="#17345f" />
+    <text class="t chip" x="230" y="214" fill="#eaf1ff">100% offline</text>
+
+    <rect x="340" y="192" width="104" height="34" rx="17" fill="#17345f" />
+    <text class="t chip" x="360" y="214" fill="#eaf1ff">PWA · MIT</text>
+  </g>
+
+  <!-- mini-app: editor + preview -->
+  <g transform="translate(700 46)">
+    <rect x="0" y="0" width="440" height="208" rx="18" fill="#12284b" stroke="#2a4679" />
+    <rect x="0" y="0" width="440" height="30" rx="18" fill="#0b1c39" />
+    <rect x="0" y="18" width="440" height="12" fill="#0b1c39" />
+    <circle cx="24" cy="15" r="5" fill="#ff7a7a" />
+    <circle cx="42" cy="15" r="5" fill="#eabf65" />
+    <circle cx="60" cy="15" r="5" fill="#57e0a5" />
+
+    <!-- panel editor -->
+    <rect x="12" y="42" width="196" height="152" rx="12" fill="#0b1c39" />
+    <g fill="#3f5f96">
+      <rect x="26" y="60" width="120" height="8" rx="4">
+        <animate attributeName="width" values="0;120;120" dur="4s" repeatCount="indefinite" />
+      </rect>
+      <rect x="26" y="82" width="96" height="8" rx="4">
+        <animate attributeName="width" values="0;0;96;96" dur="4s" repeatCount="indefinite" />
+      </rect>
+      <rect x="26" y="104" width="140" height="8" rx="4">
+        <animate attributeName="width" values="0;0;0;140;140" dur="4s" repeatCount="indefinite" />
+      </rect>
+      <rect x="26" y="126" width="72" height="8" rx="4">
+        <animate attributeName="width" values="0;0;0;0;72;72" dur="4s" repeatCount="indefinite" />
+      </rect>
+    </g>
+    <rect x="26" y="148" width="2" height="12" fill="#eabf65">
+      <animate attributeName="opacity" values="1;0;1" dur="1.1s" repeatCount="indefinite" />
+    </rect>
+
+    <!-- panel preview con diagrama -->
+    <rect x="222" y="42" width="206" height="152" rx="12" fill="#ffffff" />
+    <g fill="#dbe6ff" stroke="#5b7cc0" stroke-width="1.5">
+      <rect x="292" y="60" width="66" height="24" rx="7">
+        <animate attributeName="opacity" values="0;1;1" dur="4s" repeatCount="indefinite" />
+      </rect>
+      <rect x="246" y="112" width="60" height="24" rx="7">
+        <animate attributeName="opacity" values="0;0;1;1" dur="4s" repeatCount="indefinite" />
+      </rect>
+      <rect x="344" y="112" width="60" height="24" rx="7">
+        <animate attributeName="opacity" values="0;0;1;1" dur="4s" repeatCount="indefinite" />
+      </rect>
+      <rect x="292" y="160" width="66" height="24" rx="7">
+        <animate attributeName="opacity" values="0;0;0;1;1" dur="4s" repeatCount="indefinite" />
+      </rect>
+    </g>
+    <g stroke="#5b7cc0" stroke-width="1.5" fill="none" stroke-linecap="round">
+      <path d="M325 84 v14 M276 98 h98 M276 98 v14 M374 98 v14 M276 136 v12 h98 v-12" opacity="0.9">
+        <animate attributeName="opacity" values="0;0;0.9;0.9" dur="4s" repeatCount="indefinite" />
+      </path>
+    </g>
+    <text class="t mono" x="222" y="212" fill="#7fd4ff">render en ~5 ms</text>
+  </g>
+</svg>

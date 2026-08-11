@@ -1,9 +1,21 @@
 {
   "name": "Vizualizador Offline",
-  "short_name": "VizOffline",
-  "start_url": "/index.html",
+  "short_name": "Vizualizador",
+  "description": "Editor Markdown con live preview y diagramas Mermaid, 100% offline.",
+  "lang": "es",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#111827",
-  "theme_color": "#111827",
-  "icons": []
+  "orientation": "any",
+  "background_color": "#08142c",
+  "theme_color": "#08142c",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
