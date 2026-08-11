@@ -1,553 +1,939 @@
+/* ==========================================================================
+   Vizualizador Offline — app v2
+   Editor + live preview para Markdown, Mermaid, CSV, JSON y XML.
+   Todo ocurre en el navegador: no hay red, ni backend, ni telemetría.
+   ========================================================================== */
+
 (() => {
-  const supported = new Set(['md', 'mmd', 'mermaid', 'puml', 'drawio', 'vsdx', 'erd', 'sql', 'mm', 'xmind', 'c4', 'mpp', 'csv', 'json', 'zen', 'bpmn', 'xml']);
-  const state = { files: [], activeId: null, folderHandle: null, theme: 'dark', mermaidCount: 0 };
+  'use strict';
 
-  const editor = document.getElementById('editor');
-  const preview = document.getElementById('preview');
-  const fileInput = document.getElementById('fileInput');
-  const fileSelect = document.getElementById('fileSelect');
-  const pickFolderBtn = document.getElementById('pickFolderBtn');
-  const saveBtn = document.getElementById('saveBtn');
-  const supported = new Set([
-    'md', 'mmd', 'mermaid', 'puml', 'drawio', 'vsdx', 'erd', 'sql', 'mm', 'xmind',
-    'c4', 'mpp', 'csv', 'json', 'zen', 'bpmn', 'xml'
-  ]);
+  /* ---------------------------------------------------------------- datos */
 
-  const state = { folderHandle: null, selectedCard: null, mermaidCount: 0, theme: 'dark' };
-  const state = { folderHandle: null, selectedCard: null, mermaidCount: 0 };
+  const FORMATS = {
+    md: { label: 'Markdown', kind: 'markdown' },
+    markdown: { label: 'Markdown', kind: 'markdown' },
+    mmd: { label: 'Mermaid', kind: 'mermaid' },
+    mermaid: { label: 'Mermaid', kind: 'mermaid' },
+    csv: { label: 'CSV', kind: 'csv' },
+    tsv: { label: 'TSV', kind: 'csv' },
+    json: { label: 'JSON', kind: 'json' },
+    xml: { label: 'XML', kind: 'xml' },
+    bpmn: { label: 'BPMN', kind: 'xml' },
+    drawio: { label: 'draw.io', kind: 'xml' },
+    puml: { label: 'PlantUML', kind: 'text' },
+    c4: { label: 'C4', kind: 'text' },
+    erd: { label: 'ERD', kind: 'text' },
+    sql: { label: 'SQL', kind: 'text' },
+    zen: { label: 'Zen', kind: 'text' },
+    mm: { label: 'FreeMind', kind: 'text' },
+    xmind: { label: 'XMind', kind: 'text' },
+    mpp: { label: 'MS Project', kind: 'text' },
+    vsdx: { label: 'Visio', kind: 'text' },
+    txt: { label: 'Texto', kind: 'text' }
+  };
 
-  const fileInput = document.getElementById('fileInput');
-  const pickFolderBtn = document.getElementById('pickFolderBtn');
-  const clearBtn = document.getElementById('clearBtn');
-  const exportPdfBtn = document.getElementById('exportPdfBtn');
-  const exportImgBtn = document.getElementById('exportImgBtn');
-  const themeBtn = document.getElementById('themeBtn');
-  const status = document.getElementById('status');
-  const dropzone = document.getElementById('dropzone');
+  const STORAGE_KEY = 'vizualizador:workspace:v2';
+  const THEME_KEY = 'vizualizador:theme';
+  const MAX_PERSIST_BYTES = 1_500_000;
 
-  marked.setOptions({ gfm: true, breaks: true, headerIds: true, mangle: false });
-  const folderStatus = document.getElementById('folderStatus');
-  const previewGrid = document.getElementById('previewGrid');
-  const dropzone = document.getElementById('dropzone');
-  const template = document.getElementById('previewTemplate');
+  const DEMO = `# 👋 Bienvenido al Vizualizador Offline
 
-  mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'default' });
-  navigator.serviceWorker?.register('sw.js').catch(console.error);
+Escribe a la izquierda y **mira el resultado al instante** a la derecha.
+Todo funciona sin conexión: los motores de render viajan dentro del repo.
 
-  fileInput.addEventListener('change', async (e) => addFiles([...e.target.files]));
-  fileSelect.addEventListener('change', switchActiveFile);
-  editor.addEventListener('input', debounce(onEditorInput, 120));
-  pickFolderBtn.addEventListener('click', pickFolder);
-  saveBtn.addEventListener('click', saveActive);
-  clearBtn.addEventListener('click', clearAll);
-  exportPdfBtn.addEventListener('click', () => window.print());
-  exportImgBtn.addEventListener('click', exportImage);
-  themeBtn.addEventListener('click', toggleTheme);
+## 🧭 Cómo se mueve un documento
 
-  dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
-  clearBtn.addEventListener('click', () => {
-    previewGrid.innerHTML = '';
-    state.selectedCard = null;
-  });
-  exportPdfBtn.addEventListener('click', () => window.print());
-  exportImgBtn.addEventListener('click', exportImage);
-  pickFolderBtn.addEventListener('click', pickFolder);
-  themeBtn.addEventListener('click', toggleTheme);
-  clearBtn.addEventListener('click', () => (previewGrid.innerHTML = ''));
-  exportPdfBtn.addEventListener('click', () => window.print());
-  exportImgBtn.addEventListener('click', exportImage);
-  pickFolderBtn.addEventListener('click', pickFolder);
+\`\`\`mermaid
+flowchart LR
+  A([Archivo o tecleo]) --> B{Extensión}
+  B -->|.md| C[marked + Mermaid]
+  B -->|.mmd| D[Mermaid puro]
+  B -->|.csv / .json| E[Tabla / Árbol]
+  B -->|.xml / .bpmn| F[XML formateado]
+  C & D & E & F --> G[[Preview en vivo]]
+  G --> H{{Exportar PDF o PNG}}
+\`\`\`
 
-  dropzone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropzone.classList.add('dragover');
-  });
-  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-  dropzone.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    dropzone.classList.remove('dragover');
-    await addFiles([...e.dataTransfer.files]);
-  });
+## 📊 Lo que entiende hoy
 
-  setStatus('Listo para cargar archivos.');
+| Formato | Extensiones | Render |
+| --- | --- | --- |
+| Markdown | \`.md\` | GFM completo + diagramas embebidos |
+| Mermaid | \`.mmd\` \`.mermaid\` | Diagrama en vivo |
+| Datos | \`.csv\` \`.json\` | Tabla ordenable / árbol plegable |
+| XML | \`.xml\` \`.bpmn\` \`.drawio\` | Formateado y coloreado |
 
-  async function addFiles(files) {
-    for (const file of files) {
-      const ext = extension(file.name);
-      if (!supported.has(ext)) continue;
-      const text = await file.text();
-      const id = crypto.randomUUID();
-      state.files.push({ id, name: file.name, ext, text });
+## ⌨️ Atajos
+
+- \`Ctrl + S\` — guardar el archivo activo
+- \`Ctrl + P\` — exportar a PDF
+- \`Ctrl + D\` — alternar tema claro / oscuro
+- \`Ctrl + Shift + Z\` — restablecer el zoom del preview
+
+> Arrastra cualquier archivo sobre la ventana para abrirlo.
+> Nada sale de tu equipo: el documento vive en la memoria del navegador.
+
+---
+
+### Un diagrama más para jugar
+
+\`\`\`mermaid
+sequenceDiagram
+  participant Tú
+  participant Editor
+  participant Preview
+  Tú->>Editor: escribes una línea
+  Editor->>Preview: render (debounce 120 ms)
+  Preview-->>Tú: resultado visual
+\`\`\`
+`;
+
+  /* ------------------------------------------------------------- elementos */
+
+  const $ = (id) => document.getElementById(id);
+
+  const el = {
+    progress: $('progress'),
+    editor: $('editor'),
+    gutter: $('gutter'),
+    preview: $('preview'),
+    tabs: $('tabs'),
+    status: $('status'),
+    fileInput: $('fileInput'),
+    newBtn: $('newBtn'),
+    demoBtn: $('demoBtn'),
+    saveBtn: $('saveBtn'),
+    pickFolderBtn: $('pickFolderBtn'),
+    exportPdfBtn: $('exportPdfBtn'),
+    exportImgBtn: $('exportImgBtn'),
+    clearBtn: $('clearBtn'),
+    themeBtn: $('themeBtn'),
+    zoomIn: $('zoomInBtn'),
+    zoomOut: $('zoomOutBtn'),
+    zoomReset: $('zoomResetBtn'),
+    splitter: $('splitter'),
+    dropzone: $('dropzone'),
+    toasts: $('toasts'),
+    fileBadge: $('fileBadge'),
+    cursorInfo: $('cursorInfo'),
+    renderTime: $('renderTime'),
+    syncScroll: $('syncScroll'),
+    netPill: $('netPill'),
+    stats: {
+      chars: $('statChars'),
+      words: $('statWords'),
+      lines: $('statLines'),
+      headings: $('statHeadings'),
+      tables: $('statTables'),
+      diagrams: $('statDiagrams'),
+      read: $('statRead'),
+      folder: $('statFolder')
     }
-    rebuildSelect();
-    if (!state.activeId && state.files.length) {
-      state.activeId = state.files[0].id;
-      fileSelect.value = state.activeId;
-      loadActive();
-    }
-    setStatus(`${state.files.length} archivo(s) cargado(s).`);
+  };
+
+  const state = {
+    files: [],
+    activeId: null,
+    folderHandle: null,
+    theme: 'dark',
+    zoom: 1,
+    renderSeq: 0,
+    mermaidSeq: 0,
+    dragDepth: 0,
+    lastDiagrams: 0
+  };
+
+  /* ------------------------------------------------------------ utilidades */
+
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : `id-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+  const extensionOf = (name) => (name.includes('.') ? name.split('.').pop().toLowerCase() : 'txt');
+
+  const formatOf = (ext) => FORMATS[ext] || { label: ext.toUpperCase() || 'TEXTO', kind: 'text' };
+
+  const escapeHtml = (value = '') =>
+    String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+
+  function debounce(fn, wait) {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), wait);
+    };
   }
 
-  function extension(name) { return name.includes('.') ? name.split('.').pop().toLowerCase() : ''; }
+  function setStatus(text) {
+    el.status.textContent = text;
+    el.status.classList.remove('flash');
+    void el.status.offsetWidth;
+    el.status.classList.add('flash');
+  }
 
-  function rebuildSelect() {
-    fileSelect.innerHTML = '';
-    if (!state.files.length) {
-      fileSelect.innerHTML = '<option value="">Sin archivos</option>';
-      return;
+  function toast(message, type = '') {
+    const node = document.createElement('div');
+    node.className = `toast ${type}`.trim();
+    node.innerHTML = `<span>${type === 'ok' ? '✅' : type === 'err' ? '⚠️' : 'ℹ️'}</span><span>${escapeHtml(message)}</span>`;
+    el.toasts.append(node);
+    setTimeout(() => {
+      node.classList.add('out');
+      node.addEventListener('animationend', () => node.remove(), { once: true });
+    }, 3200);
+  }
+
+  function busy(on) {
+    el.progress.classList.toggle('active', on);
+    if (!on) setTimeout(() => (el.progress.style.width = ''), 350);
+  }
+
+  /* ------------------------------------------------------------- arranque */
+
+  function boot() {
+    marked.setOptions({ gfm: true, breaks: false });
+    applyTheme(localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark', { silent: true });
+
+    if (!restoreWorkspace()) {
+      openDocument('bienvenida.md', DEMO, { silent: true });
     }
-    state.files.forEach((f) => {
-      const option = document.createElement('option');
-      option.value = f.id;
-      option.textContent = `${f.name} (${f.ext.toUpperCase()})`;
-      fileSelect.append(option);
+
+    wireEvents();
+    updateNetPill();
+    setStatus('Listo · escribe o arrastra un archivo');
+
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('sw.js').catch(() => {
+        /* offline opcional: la app funciona igual */
+      });
+    }
+  }
+
+  function wireEvents() {
+    el.fileInput.addEventListener('change', async (event) => {
+      await addFiles([...event.target.files]);
+      event.target.value = '';
     });
-  }
 
-  function switchActiveFile() {
-    state.activeId = fileSelect.value;
-    loadActive();
-  }
+    el.editor.addEventListener('input', () => {
+      const file = activeFile();
+      if (file) file.text = el.editor.value;
+      paintGutter();
+      scheduleRender();
+      persistWorkspace();
+    });
+    el.editor.addEventListener('keyup', updateCursorInfo);
+    el.editor.addEventListener('click', updateCursorInfo);
+    el.editor.addEventListener('scroll', () => {
+      el.gutter.scrollTop = el.editor.scrollTop;
+      syncPreviewScroll();
+    });
+    el.editor.addEventListener('keydown', handleTabKey);
 
-  function loadActive() {
-    const file = state.files.find((f) => f.id === state.activeId);
-    if (!file) return;
-    editor.value = file.text;
-    render(file.ext, file.text);
-  }
+    el.newBtn.addEventListener('click', () => {
+      openDocument(`sin-titulo-${state.files.length + 1}.md`, '# Nuevo documento\n\n');
+      el.editor.focus();
+    });
+    el.demoBtn.addEventListener('click', () => openDocument('bienvenida.md', DEMO));
+    el.saveBtn.addEventListener('click', saveActive);
+    el.pickFolderBtn.addEventListener('click', pickFolder);
+    el.exportPdfBtn.addEventListener('click', () => window.print());
+    el.exportImgBtn.addEventListener('click', exportPng);
+    el.clearBtn.addEventListener('click', clearAll);
+    el.themeBtn.addEventListener('click', () => applyTheme(state.theme === 'dark' ? 'light' : 'dark'));
 
-  function onEditorInput() {
-    const file = state.files.find((f) => f.id === state.activeId);
-    if (!file) return;
-    file.text = editor.value;
-    render(file.ext, file.text);
-  }
+    el.zoomIn.addEventListener('click', () => setZoom(state.zoom + 0.1));
+    el.zoomOut.addEventListener('click', () => setZoom(state.zoom - 0.1));
+    el.zoomReset.addEventListener('click', () => setZoom(1));
 
-  async function render(ext, text) {
-    if (ext === 'mmd' || ext === 'mermaid') {
-      return renderMermaid(text);
-    }
-    if (ext === 'md') {
-      return renderMarkdown(text);
-    }
-    if (ext === 'csv') {
-      preview.innerHTML = csvToTable(text);
-      return;
-    }
-    if (ext === 'json') {
-      preview.innerHTML = `<pre><code>${escapeHtml(prettyJson(text))}</code></pre>`;
-      return;
-    }
-    if (['xml', 'bpmn', 'drawio'].includes(ext)) {
-      preview.innerHTML = `<pre><code>${escapeHtml(formatXml(text))}</code></pre>`;
-      return;
-    }
-    preview.innerHTML = `<pre><code>${escapeHtml(text)}</code></pre>`;
-  }
-
-  async function renderMarkdown(md) {
-    const tokens = [];
-    const safe = md.replace(/```(mermaid|mmd)\n([\s\S]*?)```/g, (_, __, code) => {
-      const token = `__MERMAID_${tokens.length}__`;
-      tokens.push({ token, code });
-      return token;
+    el.splitter.addEventListener('pointerdown', startSplitDrag);
+    el.splitter.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') nudgeSplit(-0.04);
+      if (event.key === 'ArrowRight') nudgeSplit(0.04);
     });
 
-    preview.innerHTML = marked.parse(safe);
+    window.addEventListener('dragenter', onDragEnter);
+    window.addEventListener('dragover', (event) => event.preventDefault());
+    window.addEventListener('dragleave', onDragLeave);
+    window.addEventListener('drop', onDrop);
+    window.addEventListener('keydown', onShortcut);
+    window.addEventListener('online', updateNetPill);
+    window.addEventListener('offline', updateNetPill);
+  }
 
-    for (const tk of tokens) {
+  /* --------------------------------------------------------------- ficheros */
+
+  const activeFile = () => state.files.find((f) => f.id === state.activeId) || null;
+
+  async function addFiles(list) {
+    let added = 0;
+    for (const file of list) {
+      const ext = extensionOf(file.name);
+      let text;
       try {
-        const id = `merm-${Date.now()}-${state.mermaidCount++}`;
-        const { svg } = await mermaid.render(id, tk.code);
-        preview.innerHTML = preview.innerHTML.replace(tk.token, `<div class="mermaid-wrap">${svg}</div>`);
+        text = await file.text();
       } catch {
-        preview.innerHTML = preview.innerHTML.replace(tk.token, `<pre><code>${escapeHtml(tk.code)}</code></pre>`);
+        toast(`No se pudo leer ${file.name}`, 'err');
+        continue;
       }
+      openDocument(file.name, text, { silent: true });
+      added += 1;
+    }
+    if (added) {
+      toast(`${added} archivo(s) abierto(s)`, 'ok');
+      setStatus(`${state.files.length} archivo(s) en el espacio de trabajo`);
+    } else {
+      toast('Ningún archivo legible en la selección', 'err');
     }
   }
 
-  async function renderMermaid(code) {
-    try {
-      const id = `merm-${Date.now()}-${state.mermaidCount++}`;
-      const { svg } = await mermaid.render(id, code);
-      preview.innerHTML = `<div class="mermaid-wrap">${svg}</div>`;
-    } catch {
-      preview.innerHTML = `<pre><code>${escapeHtml(code)}</code></pre>`;
+  function openDocument(name, text, { silent = false } = {}) {
+    const ext = extensionOf(name);
+    const file = { id: uid(), name, ext, text };
+    state.files.push(file);
+    state.activeId = file.id;
+    renderTabs();
+    loadActive();
+    persistWorkspace();
+    if (!silent) setStatus(`Abierto: ${name}`);
+    return file;
+  }
+
+  function closeFile(id) {
+    const index = state.files.findIndex((f) => f.id === id);
+    if (index === -1) return;
+    const [removed] = state.files.splice(index, 1);
+    if (state.activeId === id) {
+      const next = state.files[index] || state.files[index - 1] || null;
+      state.activeId = next ? next.id : null;
     }
-  }
-
-  function csvToTable(csv) {
-    const rows = csv.trim().split(/\r?\n/).map((line) => line.split(','));
-    if (!rows.length || !rows[0][0]) return '<p><em>CSV vacío</em></p>';
-    const [head, ...body] = rows;
-    let html = '<table><thead><tr>' + head.map((h) => `<th>${escapeHtml(h)}</th>`).join('') + '</tr></thead><tbody>';
-    body.forEach((row) => { html += '<tr>' + row.map((v) => `<td>${escapeHtml(v)}</td>`).join('') + '</tr>'; });
-    return html + '</tbody></table>';
-  }
-
-  function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2); } catch { return 'JSON inválido'; } }
-  function formatXml(xml) { return xml.replace(/>(\s*)</g, '>\n<'); }
-  function escapeHtml(v = '') { return v.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'); }
-
-  function toggleTheme() {
-    state.theme = state.theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', state.theme);
-    themeBtn.textContent = `Tema: ${state.theme === 'dark' ? 'Dark' : 'Light'}`;
+    renderTabs();
+    if (state.activeId) loadActive();
+    else resetEditor();
+    persistWorkspace();
+    setStatus(`Cerrado: ${removed.name}`);
   }
 
   function clearAll() {
+    if (!state.files.length) return;
     state.files = [];
     state.activeId = null;
-    editor.value = '';
-    preview.innerHTML = '';
-    rebuildSelect();
-    setStatus('Limpio');
-  function toggleTheme() {
-    state.theme = state.theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', state.theme);
-    themeBtn.textContent = `Tema: ${state.theme === 'dark' ? 'Dark' : 'Light'}`;
+    renderTabs();
+    resetEditor();
+    persistWorkspace();
+    toast('Espacio de trabajo vacío', 'ok');
   }
 
-  async function addFiles(files) {
-    for (const file of files) {
-      const ext = getExtension(file.name);
-  async function addFiles(files) {
-    for (const file of files) {
-      const ext = extension(file.name);
-      if (!supported.has(ext)) continue;
-      renderCard({ file, ext, text: await file.text() });
-    }
+  function resetEditor() {
+    el.editor.value = '';
+    el.fileBadge.textContent = '—';
+    paintGutter();
+    renderEmptyState();
+    updateStats('');
   }
 
-  function getExtension(name) { return name.includes('.') ? name.split('.').pop().toLowerCase() : ''; }
-
-  function renderCard(item) {
-  function extension(name) { return name.includes('.') ? name.split('.').pop().toLowerCase() : ''; }
-
-  async function renderCard(item) {
-    const node = template.content.cloneNode(true);
-    const card = node.querySelector('.card');
-    const raw = node.querySelector('.raw');
-    const rendered = node.querySelector('.rendered');
-
-    node.querySelector('.filename').textContent = item.file.name;
-    node.querySelector('.meta').textContent = `${item.ext.toUpperCase()} • ${Math.max(1, Math.round(item.file.size / 1024))} KB`;
-    raw.value = item.text;
-
-    card.addEventListener('click', () => (state.selectedCard = card));
-    raw.addEventListener('input', () => renderByType(item.ext, raw.value, rendered));
-
-    raw.textContent = item.text;
-
-    card.addEventListener('click', () => (state.selectedCard = card));
-    previewGrid.prepend(node);
-    const cardRef = previewGrid.firstElementChild;
-    if (!state.selectedCard) state.selectedCard = cardRef;
-
-    renderByType(item.ext, item.text, rendered);
+  function loadActive() {
+    const file = activeFile();
+    if (!file) return resetEditor();
+    el.editor.value = file.text;
+    el.fileBadge.textContent = formatOf(file.ext).label;
+    paintGutter();
+    updateCursorInfo();
+    renderNow();
   }
 
-  async function renderByType(ext, text, container) {
-    if (ext === 'md') return renderMarkdown(text, container);
-    if (ext === 'mmd' || ext === 'mermaid') return renderMermaid(text, container);
-    if (ext === 'csv') return void (container.innerHTML = csvToTable(text));
-    if (ext === 'json') return void (container.innerHTML = `<pre>${escapeHtml(prettyJson(text))}</pre>`);
-    if (['xml', 'bpmn', 'drawio'].includes(ext)) return void (container.innerHTML = `<pre>${escapeHtml(formatXml(text))}</pre>`);
-    await renderByType(item.ext, item.text, rendered);
+  function renderTabs() {
+    el.tabs.innerHTML = '';
+    state.files.forEach((file) => {
+      const tab = document.createElement('div');
+      tab.className = `tab${file.id === state.activeId ? ' active' : ''}`;
+      tab.title = `${file.name} · ${formatOf(file.ext).label}`;
+
+      const name = document.createElement('span');
+      name.className = 'tab-name';
+      name.textContent = file.name;
+
+      const close = document.createElement('button');
+      close.className = 'tab-close';
+      close.type = 'button';
+      close.textContent = '×';
+      close.title = 'Cerrar';
+      close.addEventListener('click', (event) => {
+        event.stopPropagation();
+        closeFile(file.id);
+      });
+
+      tab.append(name, close);
+      tab.addEventListener('click', () => {
+        if (state.activeId === file.id) return;
+        state.activeId = file.id;
+        renderTabs();
+        loadActive();
+      });
+      el.tabs.append(tab);
+    });
   }
 
-  async function renderByType(ext, text, container) {
-    if (ext === 'md') {
-      await renderMarkdown(text, container);
-      return;
-    }
-    if (ext === 'mmd' || ext === 'mermaid') {
-      await renderMermaid(text, container);
-      return;
-    }
-    if (ext === 'csv') {
-      container.innerHTML = csvToTable(text);
-      return;
-    }
-    if (ext === 'json') {
-      container.innerHTML = `<pre>${escapeHtml(prettyJson(text))}</pre>`;
-      return;
-    }
-    if (['xml', 'bpmn', 'drawio'].includes(ext)) {
-      container.innerHTML = `<pre>${escapeHtml(formatXml(text))}</pre>`;
-      return;
+  /* ------------------------------------------------------------- editor UI */
+
+  function paintGutter() {
+    const total = el.editor.value.split('\n').length;
+    const rows = [];
+    for (let i = 1; i <= total; i += 1) rows.push(i);
+    el.gutter.textContent = rows.join('\n');
+    el.gutter.scrollTop = el.editor.scrollTop;
+  }
+
+  function updateCursorInfo() {
+    const upto = el.editor.value.slice(0, el.editor.selectionStart);
+    const lines = upto.split('\n');
+    el.cursorInfo.textContent = `Ln ${lines.length}, Col ${lines[lines.length - 1].length + 1}`;
+  }
+
+  function handleTabKey(event) {
+    if (event.key !== 'Tab' || event.ctrlKey || event.altKey) return;
+    event.preventDefault();
+    const start = el.editor.selectionStart;
+    const end = el.editor.selectionEnd;
+    el.editor.setRangeText('  ', start, end, 'end');
+    el.editor.dispatchEvent(new Event('input'));
+  }
+
+  function syncPreviewScroll() {
+    if (!el.syncScroll.checked) return;
+    const max = el.editor.scrollHeight - el.editor.clientHeight;
+    if (max <= 0) return;
+    const ratio = el.editor.scrollTop / max;
+    el.preview.scrollTop = ratio * (el.preview.scrollHeight - el.preview.clientHeight);
+  }
+
+  /* ------------------------------------------------------------- render */
+
+  const scheduleRender = debounce(() => renderNow(), 120);
+
+  async function renderNow() {
+    const file = activeFile();
+    const text = el.editor.value;
+    updateStats(text);
+
+    if (!file && !text.trim()) return renderEmptyState();
+
+    const seq = ++state.renderSeq;
+    const started = performance.now();
+    busy(true);
+
+    const kind = formatOf(file ? file.ext : 'md').kind;
+    const layer = document.createElement('div');
+    layer.className = 'zoom-layer';
+    layer.style.zoom = state.zoom;
+
+    try {
+      if (kind === 'markdown') await renderMarkdown(text, layer);
+      else if (kind === 'mermaid') await renderMermaidOnly(text, layer);
+      else if (kind === 'csv') renderCsv(text, layer, file ? file.ext : 'csv');
+      else if (kind === 'json') renderJson(text, layer);
+      else if (kind === 'xml') renderXml(text, layer);
+      else renderPlain(text, layer, file ? file.ext : 'txt');
+    } catch (error) {
+      layer.innerHTML = `<div class="mermaid-error"><strong>Error de render</strong><pre>${escapeHtml(error.message || error)}</pre></div>`;
     }
 
-    container.innerHTML = `<h3>Preview textual</h3><pre>${escapeHtml(text)}</pre>`;
+    if (seq !== state.renderSeq) return; // llegó un render más reciente
+
+    el.preview.replaceChildren(layer);
+    el.preview.classList.remove('fade-in');
+    void el.preview.offsetWidth;
+    el.preview.classList.add('fade-in');
+
+    const elapsed = Math.round(performance.now() - started);
+    el.renderTime.textContent = `${elapsed} ms`;
+    countDiagrams(layer);
+    busy(false);
+  }
+
+  function renderEmptyState() {
+    el.preview.replaceChildren();
+    const box = document.createElement('div');
+    box.className = 'empty-state';
+    box.innerHTML = `
+      <div class="big">🗺️</div>
+      <strong>Nada que mostrar todavía</strong>
+      <span>Pulsa <b>Nuevo</b>, abre un archivo o arrastra uno sobre la ventana.</span>
+      <span>¿Quieres ver de qué es capaz? Pulsa <b>Demo</b>.</span>`;
+    el.preview.append(box);
+    el.renderTime.textContent = '0 ms';
   }
 
   async function renderMarkdown(md, container) {
-    const { html, mermaidBlocks } = markdownToHtml(md);
-    container.innerHTML = html;
-    for (const block of mermaidBlocks) {
-      try {
-        const id = `merm-${Date.now()}-${state.mermaidCount++}`;
-        const { svg } = await mermaid.render(id, block.code);
-        container.innerHTML = container.innerHTML.replace(block.token, `<div class="mermaid">${svg}</div>`);
-      } catch {
-        container.innerHTML = container.innerHTML.replace(block.token, `<pre>${escapeHtml(block.code)}</pre>`);
-      }
-    const mermaidBlocks = [];
-    let idx = 0;
-    const html = escapeHtml(md)
-      .replace(/```(mermaid|mmd)\n([\s\S]*?)```/g, (_, __, code) => {
-        const token = `__MERMAID_${idx++}__`;
-        mermaidBlocks.push({ token, code });
-        return token;
-      })
-      .replace(/^### (.*)$/gm, '<h3>$1</h3>')
-      .replace(/^## (.*)$/gm, '<h2>$1</h2>')
-      .replace(/^# (.*)$/gm, '<h1>$1</h1>')
-      .replace(/^- (.*)$/gm, '<li>$1</li>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/\n/g, '<br/>');
-
-    container.innerHTML = html;
-    for (const block of mermaidBlocks) {
-      const id = `merm-${Date.now()}-${state.mermaidCount++}`;
-      const { svg } = await mermaid.render(id, block.code);
-      container.innerHTML = container.innerHTML.replace(block.token, `<div class="mermaid">${svg}</div>`);
+    container.innerHTML = marked.parse(md || '');
+    const blocks = container.querySelectorAll('code.language-mermaid, code.language-mmd');
+    for (const block of blocks) {
+      const pre = block.closest('pre') || block;
+      const code = block.textContent;
+      pre.replaceWith(await mermaidNode(code));
     }
   }
 
-  async function renderMermaid(code, container) {
+  async function renderMermaidOnly(code, container) {
+    container.append(await mermaidNode(code));
+  }
+
+  async function mermaidNode(code) {
+    const wrap = document.createElement('div');
     try {
-      const id = `merm-${Date.now()}-${state.mermaidCount++}`;
-      const { svg } = await mermaid.render(id, code);
-      container.innerHTML = `<div class="mermaid">${svg}</div>`;
-    } catch {
-      container.innerHTML = `<h3>Error Mermaid</h3><pre>${escapeHtml(code)}</pre>`;
+      const id = `merm-${Date.now().toString(36)}-${state.mermaidSeq++}`;
+      const { svg } = await mermaid.render(id, code.trim());
+      wrap.className = 'mermaid-wrap';
+      wrap.innerHTML = svg;
+    } catch (error) {
+      wrap.className = 'mermaid-error';
+      wrap.innerHTML = `<strong>Mermaid no pudo dibujar este bloque</strong>
+        <pre>${escapeHtml((error && error.message) || 'Sintaxis inválida')}</pre>
+        <pre><code>${escapeHtml(code)}</code></pre>`;
     }
+    return wrap;
   }
 
-  function markdownToHtml(md) {
-    const mermaidBlocks = [];
-    const lines = md.replace(/\r/g, '').split('\n');
-    const out = [];
-    let i = 0;
-    let inCode = false;
-    let codeLang = '';
-    let codeBuffer = [];
-
-    while (i < lines.length) {
-      const line = lines[i];
-
-      const fence = line.match(/^```\s*(\w+)?\s*$/);
-      if (fence) {
-        if (!inCode) {
-          inCode = true;
-          codeLang = (fence[1] || '').toLowerCase();
-          codeBuffer = [];
-        } else {
-          if (codeLang === 'mermaid' || codeLang === 'mmd') {
-            const token = `__MERMAID_${mermaidBlocks.length}__`;
-            mermaidBlocks.push({ token, code: codeBuffer.join('\n') });
-            out.push(token);
-          } else {
-            out.push(`<pre><code>${escapeHtml(codeBuffer.join('\n'))}</code></pre>`);
-          }
-          inCode = false;
-          codeLang = '';
-          codeBuffer = [];
-        }
-        i++;
-        continue;
-      }
-
-      if (inCode) {
-        codeBuffer.push(line);
-        i++;
-        continue;
-      }
-
-      if (/^\s*$/.test(line)) {
-        out.push('');
-        i++;
-        continue;
-      }
-
-      if (/^\|.+\|$/.test(line) && i + 1 < lines.length && /^\|[\s:-|]+\|$/.test(lines[i + 1])) {
-        const headers = splitPipeRow(line);
-        i += 2;
-        const body = [];
-        while (i < lines.length && /^\|.+\|$/.test(lines[i])) {
-          body.push(splitPipeRow(lines[i]));
-          i++;
-        }
-        let table = '<table><thead><tr>' + headers.map((h) => `<th>${inlineMd(h)}</th>`).join('') + '</tr></thead><tbody>';
-        body.forEach((row) => {
-          table += '<tr>' + headers.map((_, idx) => `<td>${inlineMd(row[idx] || '')}</td>`).join('') + '</tr>';
-        });
-        table += '</tbody></table>';
-        out.push(table);
-        continue;
-      }
-
-      if (/^---+$/.test(line.trim())) { out.push('<hr/>'); i++; continue; }
-      const h = line.match(/^(#{1,3})\s+(.*)$/);
-      if (h) { out.push(`<h${h[1].length}>${inlineMd(h[2])}</h${h[1].length}>`); i++; continue; }
-
-      const ul = line.match(/^\s*[-*]\s+(.*)$/);
-      if (ul) {
-        const items = [ul[1]];
-        i++;
-        while (i < lines.length) {
-          const m = lines[i].match(/^\s*[-*]\s+(.*)$/);
-          if (!m) break;
-          items.push(m[1]);
-          i++;
-        }
-        out.push('<ul>' + items.map((it) => `<li>${inlineMd(it)}</li>`).join('') + '</ul>');
-        continue;
-      }
-
-      const ol = line.match(/^\s*\d+\.\s+(.*)$/);
-      if (ol) {
-        const items = [ol[1]];
-        i++;
-        while (i < lines.length) {
-          const m = lines[i].match(/^\s*\d+\.\s+(.*)$/);
-          if (!m) break;
-          items.push(m[1]);
-          i++;
-        }
-        out.push('<ol>' + items.map((it) => `<li>${inlineMd(it)}</li>`).join('') + '</ol>');
-        continue;
-      }
-
-      out.push(`<p>${inlineMd(line)}</p>`);
-      i++;
+  function renderCsv(raw, container, ext) {
+    const rows = parseDelimited(raw, ext === 'tsv' ? '\t' : detectDelimiter(raw));
+    if (!rows.length) {
+      container.innerHTML = '<p class="muted">Archivo de datos vacío.</p>';
+      return;
     }
-
-    return { html: out.join('\n'), mermaidBlocks };
-  }
-
-  function splitPipeRow(row) {
-    return row.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
-  }
-
-  function inlineMd(text) {
-    return escapeHtml(text)
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
-  }
-
-  function csvToTable(csv) {
-    const rows = csv.trim().split(/\r?\n/).map((line) => line.split(','));
-    if (!rows.length || (rows.length === 1 && rows[0][0] === '')) return '<em>CSV vacío</em>';
-  function csvToTable(csv) {
-    const rows = csv.trim().split(/\r?\n/).map((line) => line.split(','));
-    if (!rows.length) return '<em>CSV vacío</em>';
     const [head, ...body] = rows;
-    let out = '<table><thead><tr>' + head.map((h) => `<th>${escapeHtml(h)}</th>`).join('') + '</tr></thead><tbody>';
-    body.forEach((r) => { out += '<tr>' + r.map((v) => `<td>${escapeHtml(v)}</td>`).join('') + '</tr>'; });
-    return out + '</tbody></table>';
+    const table = document.createElement('table');
+    table.innerHTML =
+      `<thead><tr>${head.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>` +
+      `<tbody>${body
+        .map((row) => `<tr>${head.map((_, i) => `<td>${escapeHtml(row[i] ?? '')}</td>`).join('')}</tr>`)
+        .join('')}</tbody>`;
+
+    container.append(
+      viewerHead([
+        `${body.length} filas`,
+        `${head.length} columnas`,
+        `delimitador «${ext === 'tsv' ? 'tab' : detectDelimiter(raw)}»`
+      ]),
+      table
+    );
   }
 
-  function prettyJson(raw) {
-    try { return JSON.stringify(JSON.parse(raw), null, 2); }
-    catch { return 'JSON inválido'; }
+  function detectDelimiter(raw) {
+    const line = raw.split(/\r?\n/, 1)[0] || '';
+    const counts = [',', ';', '\t', '|'].map((d) => [d, line.split(d).length - 1]);
+    counts.sort((a, b) => b[1] - a[1]);
+    return counts[0][1] > 0 ? counts[0][0] : ',';
   }
 
-  function formatXml(xml) { return xml.replace(/>(\s*)</g, '>\n<'); }
+  function parseDelimited(raw, delimiter) {
+    const rows = [];
+    let row = [];
+    let value = '';
+    let quoted = false;
+    const text = raw.replace(/\r\n?/g, '\n').trim();
 
-  function escapeHtml(value = '') {
-    return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+    for (let i = 0; i < text.length; i += 1) {
+      const char = text[i];
+      if (quoted) {
+        if (char === '"' && text[i + 1] === '"') { value += '"'; i += 1; }
+        else if (char === '"') quoted = false;
+        else value += char;
+        continue;
+      }
+      if (char === '"') quoted = true;
+      else if (char === delimiter) { row.push(value); value = ''; }
+      else if (char === '\n') { row.push(value); rows.push(row); row = []; value = ''; }
+      else value += char;
+    }
+    if (value !== '' || row.length) { row.push(value); rows.push(row); }
+    return rows;
   }
+
+  function renderJson(raw, container) {
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (error) {
+      container.innerHTML = `<div class="mermaid-error"><strong>JSON inválido</strong><pre>${escapeHtml(error.message)}</pre></div>`;
+      return;
+    }
+    const tree = document.createElement('div');
+    tree.className = 'json-tree';
+    tree.innerHTML = jsonToHtml(data, null, 0);
+    container.append(viewerHead([`${countNodes(data)} nodos`, `tipo raíz: ${Array.isArray(data) ? 'array' : typeof data}`]), tree);
+  }
+
+  function jsonToHtml(value, key, depth) {
+    const label = key === null ? '' : `<span class="json-key">"${escapeHtml(key)}"</span>: `;
+    if (value === null) return `<div class="json-row">${label}<span class="json-null">null</span></div>`;
+    if (Array.isArray(value)) {
+      const items = value.map((item, index) => jsonToHtml(item, String(index), depth + 1)).join('');
+      return `<details ${depth < 2 ? 'open' : ''}><summary>${label}[ ] <span class="json-count">${value.length} elementos</span></summary>${items}</details>`;
+    }
+    if (typeof value === 'object') {
+      const keys = Object.keys(value);
+      const items = keys.map((k) => jsonToHtml(value[k], k, depth + 1)).join('');
+      return `<details ${depth < 2 ? 'open' : ''}><summary>${label}{ } <span class="json-count">${keys.length} claves</span></summary>${items}</details>`;
+    }
+    const cls = typeof value === 'string' ? 'json-string' : typeof value === 'number' ? 'json-number' : 'json-boolean';
+    const shown = typeof value === 'string' ? `"${value}"` : String(value);
+    return `<div class="json-row">${label}<span class="${cls}">${escapeHtml(shown)}</span></div>`;
+  }
+
+  function countNodes(value) {
+    if (value === null || typeof value !== 'object') return 1;
+    return Object.values(value).reduce((total, item) => total + countNodes(item), 1);
+  }
+
+  function renderXml(raw, container) {
+    const pretty = prettyXml(raw);
+    const tags = (raw.match(/<[a-zA-Z_][^\s/>]*/g) || []).length;
+    const pre = document.createElement('pre');
+    pre.innerHTML = `<code class="code-lines">${pretty
+      .split('\n')
+      .map((line) => `<span class="cl">${highlightXml(line)}</span>`)
+      .join('')}</code>`;
+    container.append(viewerHead([`${tags} etiquetas`, `${pretty.split('\n').length} líneas formateadas`]), pre);
+  }
+
+  function prettyXml(xml) {
+    const compact = xml.replace(/>\s+</g, '><').trim();
+    let depth = 0;
+    return compact
+      .replace(/></g, '>\n<')
+      .split('\n')
+      .map((line) => {
+        if (/^<\/.+/.test(line)) depth = Math.max(0, depth - 1);
+        const out = '  '.repeat(depth) + line;
+        if (/^<[^!?/][^>]*[^/]>$/.test(line) && !/^<.+<\/.+>$/.test(line)) depth += 1;
+        return out;
+      })
+      .join('\n');
+  }
+
+  function highlightXml(line) {
+    return escapeHtml(line)
+      .replace(/&lt;(\/?[\w:.-]+)/g, '&lt;<span class="xml-tag">$1</span>')
+      .replace(/([\w:.-]+)=(&quot;.*?&quot;)/g, '<span class="xml-attr">$1</span>=<span class="xml-val">$2</span>');
+  }
+
+  function renderPlain(text, container, ext) {
+    const pre = document.createElement('pre');
+    pre.innerHTML = `<code class="code-lines">${text
+      .split('\n')
+      .map((line) => `<span class="cl">${escapeHtml(line) || ' '}</span>`)
+      .join('')}</code>`;
+    container.append(
+      viewerHead([formatOf(ext).label, `${text.split('\n').length} líneas`, 'vista textual'], 'Sin renderer gráfico para este formato'),
+      pre
+    );
+  }
+
+  function viewerHead(chips, note) {
+    const head = document.createElement('div');
+    head.className = 'viewer-head';
+    head.innerHTML =
+      chips.map((chip, index) => `<span class="chip${index === 0 ? ' chip-accent' : ''}">${escapeHtml(chip)}</span>`).join('') +
+      (note ? `<span class="chip">${escapeHtml(note)}</span>` : '');
+    return head;
+  }
+
+  /* ------------------------------------------------------------ estadística */
+
+  function updateStats(text) {
+    const lines = text ? text.split('\n').length : 0;
+    const words = text ? (text.trim().match(/\S+/g) || []).length : 0;
+    const headings = (text.match(/^#{1,6}\s+\S/gm) || []).length;
+    const tables = (text.match(/^\s*\|.+\|\s*$/gm) || []).length ? countTables(text) : 0;
+    const diagrams = (text.match(/```(mermaid|mmd)/g) || []).length;
+
+    setStat('chars', text.length);
+    setStat('words', words);
+    setStat('lines', lines);
+    setStat('headings', headings);
+    setStat('tables', tables);
+    setStat('diagrams', diagrams);
+    setStat('read', Math.max(words ? 1 : 0, Math.round(words / 200)));
+  }
+
+  function countTables(text) {
+    return (text.match(/^\s*\|[\s:|-]+\|\s*$/gm) || []).length;
+  }
+
+  function setStat(key, value) {
+    const node = el.stats[key];
+    if (!node || node.textContent === String(value)) return;
+    node.textContent = value;
+    const parent = node.closest('.stat');
+    parent.classList.remove('bump');
+    void parent.offsetWidth;
+    parent.classList.add('bump');
+  }
+
+  function countDiagrams(container) {
+    const total = container.querySelectorAll('.mermaid-wrap').length;
+    if (total && total !== state.lastDiagrams) {
+      state.lastDiagrams = total;
+      setStatus(`${total} diagrama(s) dibujado(s)`);
+    }
+  }
+
+  /* ------------------------------------------------------------ tema y zoom */
+
+  function applyTheme(theme, { silent = false } = {}) {
+    state.theme = theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    el.themeBtn.querySelector('.btn-ico').textContent = theme === 'dark' ? '🌙' : '☀️';
+    el.themeBtn.querySelector('.btn-label').textContent = theme === 'dark' ? 'Dark' : 'Light';
+    localStorage.setItem(THEME_KEY, theme);
+
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      suppressErrorRendering: true,
+      theme: theme === 'dark' ? 'default' : 'neutral',
+      flowchart: { curve: 'basis', useMaxWidth: true }
+    });
+
+    if (!silent) {
+      renderNow();
+      setStatus(`Tema ${theme === 'dark' ? 'oscuro' : 'claro'}`);
+    }
+  }
+
+  function setZoom(value) {
+    state.zoom = Math.min(2.5, Math.max(0.5, Math.round(value * 10) / 10));
+    el.zoomReset.textContent = `${Math.round(state.zoom * 100)}%`;
+    const layer = el.preview.querySelector('.zoom-layer');
+    if (layer) layer.style.zoom = state.zoom;
+  }
+
+  function nudgeSplit(delta) {
+    const current = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--split') || '0.5');
+    setSplit(current + delta);
+  }
+
+  function setSplit(fraction) {
+    const clamped = Math.min(0.8, Math.max(0.2, fraction));
+    document.documentElement.style.setProperty('--split', clamped);
+    document.documentElement.style.setProperty('--editor-fraction', `${clamped}fr`);
+  }
+
+  function startSplitDrag(event) {
+    if (window.innerWidth <= 980) return;
+    event.preventDefault();
+    el.splitter.classList.add('dragging');
+    el.splitter.setPointerCapture(event.pointerId);
+
+    const workspace = document.getElementById('workspace');
+    const move = (moveEvent) => {
+      const rect = workspace.getBoundingClientRect();
+      setSplit((moveEvent.clientX - rect.left) / rect.width);
+    };
+    const stop = () => {
+      el.splitter.classList.remove('dragging');
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop);
+  }
+
+  /* ------------------------------------------------------- guardar/exportar */
 
   async function pickFolder() {
     if (!window.showDirectoryPicker) {
-      setStatus('File System Access API no compatible.');
+      toast('La API de carpetas solo está en Chrome/Edge de escritorio', 'err');
       return;
     }
-    state.folderHandle = await window.showDirectoryPicker();
-    setStatus(`Carpeta: ${state.folderHandle.name}`);
+    try {
+      state.folderHandle = await window.showDirectoryPicker();
+      el.stats.folder.textContent = `Carpeta: ${state.folderHandle.name}`;
+      toast(`Guardaré en «${state.folderHandle.name}»`, 'ok');
+    } catch {
+      /* el usuario canceló el diálogo */
+    }
   }
 
   async function saveActive() {
-    const file = state.files.find((f) => f.id === state.activeId);
-    if (!file) return;
+    const file = activeFile();
+    if (!file) return toast('No hay archivo activo', 'err');
+    file.text = el.editor.value;
+
     if (state.folderHandle) {
-      const handle = await state.folderHandle.getFileHandle(file.name, { create: true });
-      const writable = await handle.createWritable();
-      await writable.write(file.text);
-      await writable.close();
-      setStatus(`Guardado en ${state.folderHandle.name}/${file.name}`);
-      return;
+      try {
+        const handle = await state.folderHandle.getFileHandle(file.name, { create: true });
+        const writable = await handle.createWritable();
+        await writable.write(file.text);
+        await writable.close();
+        toast(`Guardado en ${state.folderHandle.name}/${file.name}`, 'ok');
+        return;
+      } catch (error) {
+        toast(`No se pudo escribir en la carpeta: ${error.message}`, 'err');
+      }
     }
-    const blob = new Blob([file.text], { type: 'text/plain' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = file.name;
-    a.click();
-    setStatus(`Descargado: ${file.name}`);
+    downloadBlob(new Blob([file.text], { type: 'text/plain;charset=utf-8' }), file.name);
+    toast(`Descargado: ${file.name}`, 'ok');
   }
 
-  async function exportImage() {
-      folderStatus.textContent = 'Carpeta: API no compatible en este navegador.';
-      return;
+  async function exportPng() {
+    const svg = el.preview.querySelector('.mermaid-wrap svg');
+    busy(true);
+    try {
+      const blob = svg ? await svgToPng(svg) : await textToPng();
+      const name = `${(activeFile()?.name || 'preview').replace(/\.[^.]+$/, '')}.png`;
+      if (state.folderHandle) {
+        const handle = await state.folderHandle.getFileHandle(name, { create: true });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        toast(`PNG guardado en ${state.folderHandle.name}/${name}`, 'ok');
+      } else {
+        downloadBlob(blob, name);
+        toast(`PNG exportado: ${name}`, 'ok');
+      }
+    } catch (error) {
+      toast(`No se pudo exportar PNG: ${error.message}`, 'err');
+    } finally {
+      busy(false);
     }
-    state.folderHandle = await window.showDirectoryPicker();
-    folderStatus.textContent = `Carpeta: ${state.folderHandle.name}`;
   }
 
-  async function exportImage() {
-    const card = state.selectedCard || previewGrid.querySelector('.card');
-    if (!card) return;
+  function svgToPng(svg) {
+    return new Promise((resolve, reject) => {
+      const clone = svg.cloneNode(true);
+      const box = svg.getBoundingClientRect();
+      const width = Math.max(320, Math.round(box.width || 800));
+      const height = Math.max(200, Math.round(box.height || 600));
+      clone.setAttribute('width', width);
+      clone.setAttribute('height', height);
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+      const source = new XMLSerializer().serializeToString(clone);
+      const image = new Image();
+      image.onload = () => {
+        const scale = 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = width * scale;
+        canvas.height = height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('canvas vacío'))), 'image/png');
+      };
+      image.onerror = () => reject(new Error('el SVG no se pudo rasterizar'));
+      image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(source)}`;
+    });
+  }
+
+  function textToPng() {
     const canvas = document.createElement('canvas');
     canvas.width = 1600;
     canvas.height = 1000;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#0b1a35';
+    const dark = state.theme === 'dark';
+
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, dark ? '#08142c' : '#ffffff');
+    gradient.addColorStop(1, dark ? '#12284b' : '#e4edff');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#eabf65';
+
+    ctx.fillStyle = dark ? '#eabf65' : '#8f6204';
     ctx.font = 'bold 30px sans-serif';
-    ctx.fillText('Vizualizador Offline - Editor', 36, 55);
-    ctx.fillStyle = '#eaf1ff';
-    ctx.font = '15px monospace';
-    editor.value.split('\n').slice(0, 48).forEach((l, i) => ctx.fillText(l.slice(0, 150), 36, 100 + i * 18));
-    const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
-    ctx.fillStyle = '#e5ba58';
-    ctx.font = 'bold 28px sans-serif';
-    ctx.fillText(card.querySelector('.filename').textContent, 36, 52);
-    ctx.fillStyle = '#ecf2ff';
-    ctx.font = '16px monospace';
-    const lines = card.querySelector('.raw').value.split('\n');
-    ctx.fillStyle = '#0b1220';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#22d3ee';
-    ctx.font = 'bold 28px sans-serif';
-    ctx.fillText(card.querySelector('.filename').textContent, 36, 52);
-    ctx.fillStyle = '#e5ecff';
-    ctx.font = '16px monospace';
-    const lines = card.querySelector('.raw').textContent.split('\n');
-    lines.slice(0, 45).forEach((line, i) => ctx.fillText(line.slice(0, 150), 36, 92 + i * 20));
+    ctx.fillText(activeFile()?.name || 'Vizualizador Offline', 40, 58);
 
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
-    if (state.folderHandle) {
-      const name = `${Date.now()}-preview.png`;
-      const handle = await state.folderHandle.getFileHandle(name, { create: true });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      folderStatus.textContent = `PNG guardado en ${state.folderHandle.name}/${name}`;
-      return;
-    }
+    ctx.fillStyle = dark ? '#a3b6db' : '#47638f';
+    ctx.font = '16px sans-serif';
+    ctx.fillText(new Date().toLocaleString(), 40, 84);
 
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'preview.png';
-    a.click();
+    ctx.fillStyle = dark ? '#eaf1ff' : '#102546';
+    ctx.font = '16px ui-monospace, monospace';
+    el.editor.value
+      .split('\n')
+      .slice(0, 46)
+      .forEach((line, index) => ctx.fillText(line.slice(0, 150), 40, 126 + index * 19));
+
+    return new Promise((resolve, reject) =>
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('canvas vacío'))), 'image/png')
+    );
   }
 
-  function setStatus(text) { status.textContent = text; }
-  function debounce(fn, wait) { let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); }; }
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  /* ------------------------------------------------------- drag & drop / UX */
+
+  function onDragEnter(event) {
+    if (![...(event.dataTransfer?.types || [])].includes('Files')) return;
+    event.preventDefault();
+    state.dragDepth += 1;
+    el.dropzone.classList.add('visible');
+  }
+
+  function onDragLeave() {
+    state.dragDepth = Math.max(0, state.dragDepth - 1);
+    if (!state.dragDepth) el.dropzone.classList.remove('visible');
+  }
+
+  async function onDrop(event) {
+    event.preventDefault();
+    state.dragDepth = 0;
+    el.dropzone.classList.remove('visible');
+    const files = [...(event.dataTransfer?.files || [])];
+    if (files.length) await addFiles(files);
+  }
+
+  function onShortcut(event) {
+    if (!event.ctrlKey && !event.metaKey) return;
+    const key = event.key.toLowerCase();
+    if (key === 's') { event.preventDefault(); saveActive(); }
+    else if (key === 'p') { event.preventDefault(); window.print(); }
+    else if (key === 'd') { event.preventDefault(); applyTheme(state.theme === 'dark' ? 'light' : 'dark'); }
+    else if (key === 'z' && event.shiftKey) { event.preventDefault(); setZoom(1); }
+  }
+
+  function updateNetPill() {
+    const online = navigator.onLine;
+    el.netPill.textContent = online ? 'Offline ready' : 'Sin conexión · todo sigue';
+    el.netPill.classList.toggle('offline', !online);
+  }
+
+  /* ------------------------------------------------------------ persistencia */
+
+  const persistWorkspace = debounce(() => {
+    try {
+      const payload = JSON.stringify({ activeId: state.activeId, files: state.files });
+      if (payload.length > MAX_PERSIST_BYTES) return;
+      localStorage.setItem(STORAGE_KEY, payload);
+    } catch {
+      /* cuota llena: seguimos sin persistir */
+    }
+  }, 600);
+
+  function restoreWorkspace() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      if (!Array.isArray(data.files) || !data.files.length) return false;
+      state.files = data.files;
+      state.activeId = data.files.some((f) => f.id === data.activeId) ? data.activeId : data.files[0].id;
+      renderTabs();
+      loadActive();
+      setStatus(`Sesión restaurada · ${state.files.length} archivo(s)`);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /* -------------------------------------------------------------- ejecución */
+
+  setSplit(0.5);
+  boot();
 })();
