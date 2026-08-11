@@ -2,14 +2,18 @@
    Estrategia: cache-first para los recursos propios, con red como respaldo.
    Al activar una versión nueva se borran todas las cachés anteriores. */
 
-const CACHE = 'vizualizador-offline-v5';
+const CACHE = 'vizualizador-offline-v6';
 
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './assets/css/styles.css',
+  './assets/js/nucleo.js',
   './assets/js/app.js',
+  './assets/js/vistas/v1-tarjetas.js',
+  './assets/js/vistas/v2-editor.js',
+  './assets/js/vistas/v3-estudio.js',
   './assets/icons/icon.svg',
   './assets/vendor/marked.min.js',
   './assets/vendor/mermaid.min.js'
